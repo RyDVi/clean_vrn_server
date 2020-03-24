@@ -66,75 +66,68 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		break;
 
 	case "POST":
-		// echo "Это POST запрос, необходим для вставки новых строк в таблицы";
 		if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
 			http_response_code(501);
 			die(json_encode(["error" => "Server support only json request"]));
 		}
 		$postData = file_get_contents('php://input');
 		$data = json_decode($postData, true);
-		if ($data != NULL) {
-			$stmt = $conn->prepare("INSERT INTO persons(lastname,name,middlename,date_of_birth) 
-			VALUES(?,?,?,?)");
-			$stmt->bind_param("sssd", $data["lastname"], $data["name"], $data["middlename"], $data["date_of_birth"]);
+		if (isset($data)) {
+			if (isset($data['number'])) {
+				$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
+				$stmt->bind_param("isi", $data["number"], $data["name"], $_SESSION["id_game"]);
+			} else {
+				//TODO: сделать генерацию номера команды
+				// $stmtTeamsNumbers = $conn->prepare("SELECT number FROM teams WHERE id_game=?");
+				// $stmt->bind_param('i', $data['id_game']);
+				// $stmt->bind_result($number);
+				// while ($stmt->fetch()) {
+				// }
+				$stmt = $conn->prepare("INSERT INTO teams(name, id_game) VALUES(?,?)");
+				$stmt->bind_param("si", $data["name"], $_SESSION["id_game"]);
+			}
 			if (!$stmt->execute()) {
 				die(json_encode(["error" => $stmt->error]));
 			}
 			header("Content-Type: application/json");
 			http_response_code(201);
-			$data = json_encode(["id" => $stmt->insert_id]); //в insert_id находится сгенерированный ИД
-			echo $data;
+			echo json_encode([
+				"id" => $stmt->insert_id, 'number' => $data['number'],
+				"name" => $data['name']
+			]);
 		} else {
 			http_response_code(204);
-			die(json_encode(["error" => "No Сontent"]));
+			echo json_encode(["error" => "No Сontent"]);
 		}
 		break;
 	case "PUT":
-		echo "Это PUT запрос, необходим для изменения полей строк, например, изменения имени с Василий на Максим";
-		// if ($_PUT["id"] == NULL) {
-		// 	http_response_code(204);
-		// 	die(json_encode(["error" => "No id"]));
-		// }
-		// if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-		// 	http_response_code(501);
-		// 	die(json_encode(["error" => "Server support only json request"]));
-		// }
-		// $postData = file_get_contents('php://input');
-		// $data = json_decode($postData, true);
-		// if ($data != NULL) {
-		// 	$query = "UPDATE persons SET lastname=?, name=?, middlename=?, date_of_birth=? WHERE id=?";
-		// 	$stmt = $conn->prepare($query);
-		// 	$stmt->bind_param("sssdi", $data["lastname"], $data["name"], $data["middlename"], $data["date_of_birth"], $_PUT["id"]);
-		// 	if (!$stmt->execute()) {
-		// 		die(json_encode(["error" => $stmt->error]));
-		// 	}
-		// 	header("Content-Type: application/json");
-		// 	http_response_code(201);
-		// 	$data = json_encode(["id" => $stmt->insert_id]); //в insert_id находится сгенерированный ИД
-		// 	echo $data;
-		// } else {
-		// 	http_response_code(204);
-		// 	die(json_encode(["error" => "No Сontent"]));
-		// }
+		if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
+			http_response_code(501);
+			echo json_encode(["error" => "Server support only json request"]);
+		} else {
+			header("Content-Type: application/json");
+			$postData = file_get_contents('php://input');
+			$data = json_decode($postData, true);
+			if (isset($data) && isset($_GET['id_team'])) {
+				$stmt = $conn->prepare("UPDATE teams SET number=?, name=? WHERE id=?");
+				$stmt->bind_param("isi", $data["number"], $data["name"], $_GET['id_team']);
+				if (!$stmt->execute()) {
+					die(json_encode(["error" => $stmt->error]));
+				} else {
+					http_response_code(201);
+					echo json_encode([
+						"id" => $_GET['id_team'], "number" => $data['number'],
+						"name" => $data['name']
+					]);
+				}
+			} else {
+				http_response_code(204);
+				echo json_encode(["error" => "No Сontent"]);
+			}
+		}
 		break;
-		// case "DELETE":
-		// 	// echo "Это DELETE запрос, необходим для удаления строк из таблиц";
-		// 	if ($_PUT["id"] == NULL) {
-		// 		http_response_code(204);
-		// 		die(json_encode(["error" => "No id"]));
-		// 	}
-		// 	$stmt = $conn->prepare("DELETE FROM persons WHERE id=?");
-		// 	$stmt->bind_param("i", $_PUT["id"]);
-		// 	if (!$stmt->execute()) {
-		// 		die(json_encode(["error" => $stmt->error]));
-		// 	}
-		// 	header("Content-Type: application/json");
-		// 	http_response_code(201);
-		// 	$data = json_encode(["id" => $stmt->insert_id]); //в insert_id находится сгенерированный ИД
-		// 	echo $data;
-		// 	break;
 	default:
 		http_response_code(405);
-		echo 'Method not implemented'; //Это в случае, если используется другой метод, который не реализован
+		echo json_encode(['error' => 'Method not implemented']);
 }
-$conn->close(); //Закрытие соединения (необходимо делать после окончания работы с БД)
+$conn->close();
