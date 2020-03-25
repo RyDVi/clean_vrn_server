@@ -64,17 +64,22 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		}
 		$postData = file_get_contents('php://input');
 		$data = json_decode($postData, true);
-		if ($data != NULL) {
-			$stmt = $conn->prepare("INSERT INTO persons(lastname,name,middlename,date_of_birth) 
-			VALUES(?,?,?,?)");
-			$stmt->bind_param("sssd", $data["lastname"], $data["name"], $data["middlename"], $data["date_of_birth"]);
-			if (!$stmt->execute()) {
-				die(json_encode(["error" => $stmt->error]));
+		if (isset($_GET['id_game']) && isset($data)) {
+			$createdCoefficient = [];
+			foreach ($data['coefficients'] as &$coefficients) {
+				$stmt = $conn->prepare("INSERT INTO garbage_coefficients(id_garbage, id_game, coefficient) VALUES (?,?,?)");
+				$stmt->bind_param("iii", $coefficients['id_garbage'], $_GET['id_game'], $coefficients['coefficient']);
+				if (!$stmt->execute()) {
+					// die(json_encode(["error" => $stmt->error]));
+				}
+				array_push($createdCoefficient, [
+					"id" => $stmt->insert_id, "id_garbage" => $coefficients['id_garbage'],
+					"id_game" => $_GET['id_game'], "coefficient" => $coefficients['coefficient']
+				]);
 			}
 			header("Content-Type: application/json");
 			http_response_code(201);
-			$data = json_encode(["id" => $stmt->insert_id]); //в insert_id находится сгенерированный ИД
-			echo $data;
+			echo json_encode($createdCoefficient);
 		} else {
 			http_response_code(204);
 			die(json_encode(["error" => "No Сontent"]));
@@ -87,15 +92,15 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		} else {
 			$postData = file_get_contents('php://input');
 			$data = json_decode($postData, true);
-			if (isset($_GET['id_team']) && isset($data)) {
-				foreach ($data['collected_garbages'] as &$collected_garbage) {
+			if (isset($_GET['id_game']) && isset($data)) {
+				foreach ($data['coefficients'] as &$coefficients) {
 					$stmt = null;
-					if (!isset($collected_garbage['id_collected_garbage'])) {
-						$stmt = $conn->prepare("INSERT INTO teams_garbages(id_team, id_garbage, count) VALUES (?,?,?)");
-						$stmt->bind_param('iii', $_GET['id_team'], $collected_garbage['id_garbage'], $collected_garbage['count']);
+					if (!isset($coefficients['id'])) {
+						$stmt = $conn->prepare("INSERT INTO garbage_coefficients(id_garbage, id_game, coefficient) VALUES (?,?,?)");
+						$stmt->bind_param('iii', $coefficients['id_garbage'], $_GET['id_game'], $coefficients['coefficient']);
 					} else {
-						$stmt = $conn->prepare("UPDATE teams_garbages SET count=? WHERE id=?");
-						$stmt->bind_param('ii', $collected_garbage['count'], $collected_garbage['id_collected_garbage']);
+						$stmt = $conn->prepare("UPDATE garbage_coefficients SET coefficient=? WHERE id=?");
+						$stmt->bind_param('ii', $coefficients['coefficient'], $coefficients['id']);
 					}
 					$stmt->execute();
 					if ($stmt->fetch()) {
@@ -110,22 +115,6 @@ switch ($_SERVER['REQUEST_METHOD']) {
 			}
 		}
 		break;
-		// case "DELETE":
-		// 	// echo "Это DELETE запрос, необходим для удаления строк из таблиц";
-		// 	if ($_PUT["id"] == NULL) {
-		// 		http_response_code(204);
-		// 		die(json_encode(["error" => "No id"]));
-		// 	}
-		// 	$stmt = $conn->prepare("DELETE FROM persons WHERE id=?");
-		// 	$stmt->bind_param("i", $_PUT["id"]);
-		// 	if (!$stmt->execute()) {
-		// 		die(json_encode(["error" => $stmt->error]));
-		// 	}
-		// 	header("Content-Type: application/json");
-		// 	http_response_code(201);
-		// 	$data = json_encode(["id" => $stmt->insert_id]); //в insert_id находится сгенерированный ИД
-		// 	echo $data;
-		// 	break;
 	default:
 		http_response_code(405);
 		echo 'Method not implemented'; //Это в случае, если используется другой метод, который не реализован
