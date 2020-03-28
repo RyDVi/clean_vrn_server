@@ -31,20 +31,6 @@ switch ($_SERVER['REQUEST_METHOD']) {
 			$stmt->close(); //Завершение запроса
 		} else {
 			if (isset($_SESSION['id_game']) && isset($_GET['id_team'])) {
-				/*
-				SELECT tg.id, tg.id_team, tg.id_garbage, gc.id_game, 
-				g.name, tg.count, gc.coefficient FROM teams_garbages tg 
-				INNER JOIN garbages g ON tg.id_garbage=g.id 
-				INNER JOIN garbage_coefficients gc ON g.id=gc.id_garbage 
-				WHERE tg.id_team=2 AND gc.id_game=1 
-UNION ALL SELECT NULL, NULL, g.id, NULL, g.name, NULL, gc.coefficient
-				FROM garbages g INNER JOIN garbage_coefficients gc ON g.id=gc.id_garbage WHERE g.id NOT IN (SELECT id_garbage FROM teams_garbages WHERE id_team=2)
-				*/
-				// $stmtGarbages = $conn->prepare("SELECT tg.id, tg.id_team, tg.id_garbage, gc.id_game, 
-				// g.name, tg.count, gc.coefficient FROM teams_garbages tg 
-				// INNER JOIN garbages g ON tg.id_garbage=g.id 
-				// INNER JOIN garbage_coefficients gc ON g.id=gc.id_garbage 
-				// WHERE tg.id_team=? AND gc.id_game=?");
 				$stmtGarbages = $conn->prepare("SELECT tg.id, tg.id_team, tg.id_garbage, gc.id_game, 
 				g.name, tg.count, gc.coefficient FROM teams_garbages tg 
 				INNER JOIN garbages g ON tg.id_garbage=g.id 
@@ -53,8 +39,8 @@ UNION ALL SELECT NULL, NULL, g.id, NULL, g.name, NULL, gc.coefficient
 				UNION ALL 
 				SELECT NULL, NULL, g.id, NULL, g.name, NULL, gc.coefficient
 				FROM garbages g INNER JOIN garbage_coefficients gc ON g.id=gc.id_garbage 
-				WHERE g.id NOT IN (SELECT id_garbage FROM teams_garbages WHERE id_team=?)");
-				$stmtGarbages->bind_param('iii', $_GET['id_team'], $_SESSION['id_game'], $_GET['id_team']);
+				WHERE g.id NOT IN (SELECT id_garbage FROM teams_garbages WHERE id_team=?) AND gc.id_game=?");
+				$stmtGarbages->bind_param('iiii', $_GET['id_team'], $_SESSION['id_game'], $_GET['id_team'], $_SESSION['id_game']);
 				$stmtGarbages->execute();
 				$stmtGarbages->bind_result(
 					$id_collected_garbage,
