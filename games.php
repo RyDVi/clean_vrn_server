@@ -30,7 +30,6 @@ switch ($_SERVER['REQUEST_METHOD']) {
 			} else {
 				http_response_code(404);
 			}
-			$stmt->close(); //Завершение запроса
 		} else {
 			$stmt = $conn->prepare("SELECT * FROM games");
 			$stmt->execute();
@@ -43,8 +42,6 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				]);
 			}
 			echo json_encode($data);
-			// http_response_code(404);
-			// die("id of person not specified");
 		}
 		break;
 
@@ -98,8 +95,24 @@ switch ($_SERVER['REQUEST_METHOD']) {
 			}
 		}
 		break;
+	case "DELETE":
+		header("Content-type: application/json");
+		if (isset($_GET['id'])) {
+			$stmt = $conn->prepare("DELETE FROM games WHERE id=?");
+			$stmt->bind_param("i", $_GET['id']);
+			$stmt->execute();
+			if ($stmt->affected_rows > 0) {
+				http_response_code(200);
+			} else {
+				http_response_code(404);
+			}
+			$stmt->close();
+		} else {
+			http_response_code(404);
+		}
+		break;
 	default:
 		http_response_code(405);
-		echo 'Method not implemented'; //Это в случае, если используется другой метод, который не реализован
+		echo 'Method not implemented';
 }
-$conn->close(); //Закрытие соединения (необходимо делать после окончания работы с БД)
+$conn->close();
