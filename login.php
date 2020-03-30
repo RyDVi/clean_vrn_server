@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
             $stmt->bind_result($id, $idUserType, $firstname, $lastname, $middlename, $email, $phone);
             if ($stmt->fetch()) {
                 // http_response_code(201);
+                $_SESSION['id_user_type'] = $idUserType;
                 echo json_encode([
                     'session_id' => 'PHPSESSID=' . session_id(), 'id_user_type' => $idUserType,
                     'id_user' => $id, 'firstname' => $firstname, 'lastname' => $lastname,

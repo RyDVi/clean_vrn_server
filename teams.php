@@ -66,66 +66,109 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		break;
 
 	case "POST":
-		if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-			http_response_code(501);
-			die(json_encode(["error" => "Server support only json request"]));
-		}
-		$postData = file_get_contents('php://input');
-		$data = json_decode($postData, true);
-		if (isset($data)) {
-			if (isset($data['number'])) {
-				$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
-				$stmt->bind_param("isi", $data["number"], $data["name"], $_SESSION["id_game"]);
-			} else {
-				//TODO: сделать генерацию номера команды
-				// $stmtTeamsNumbers = $conn->prepare("SELECT number FROM teams WHERE id_game=?");
-				// $stmt->bind_param('i', $data['id_game']);
-				// $stmt->bind_result($number);
-				// while ($stmt->fetch()) {
-				// }
-				$stmt = $conn->prepare("INSERT INTO teams(name, id_game) VALUES(?,?)");
-				$stmt->bind_param("si", $data["name"], $_SESSION["id_game"]);
+		$idUserType = $_SESSION('id_user_type');
+		if(isset($idUserType))
+		{
+			if($idUserType == "2") {
+				if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
+					http_response_code(501);
+					die(json_encode(["error" => "Server support only json request"]));
+				}
+				$postData = file_get_contents('php://input');
+				$data = json_decode($postData, true);
+				if (isset($data)) {
+					if (isset($data['number'])) {
+						$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
+						$stmt->bind_param("isi", $data["number"], $data["name"], $_SESSION["id_game"]);
+					} else {
+						//TODO: сделать генерацию номера команды
+						// $stmtTeamsNumbers = $conn->prepare("SELECT number FROM teams WHERE id_game=?");
+						// $stmt->bind_param('i', $data['id_game']);
+						// $stmt->bind_result($number);
+						// while ($stmt->fetch()) {
+						// }
+						$stmt = $conn->prepare("INSERT INTO teams(name, id_game) VALUES(?,?)");
+						$stmt->bind_param("si", $data["name"], $_SESSION["id_game"]);
+					}
+					if (!$stmt->execute()) {
+						die(json_encode(["error" => $stmt->error]));
+					}
+					header("Content-Type: application/json");
+					http_response_code(201);
+					echo json_encode([
+						"id" => $stmt->insert_id, 'number' => $data['number'],
+						"name" => $data['name']
+					]);
+				} else {
+					http_response_code(204);
+					echo json_encode(["error" => "No Сontent"]);
+				}
 			}
-			if (!$stmt->execute()) {
-				die(json_encode(["error" => $stmt->error]));
+			else {
+				http_response_code(403);
 			}
-			header("Content-Type: application/json");
-			http_response_code(201);
-			echo json_encode([
-				"id" => $stmt->insert_id, 'number' => $data['number'],
-				"name" => $data['name']
-			]);
-		} else {
-			http_response_code(204);
-			echo json_encode(["error" => "No Сontent"]);
 		}
 		break;
 	case "PUT":
-		if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-			http_response_code(501);
-			echo json_encode(["error" => "Server support only json request"]);
-		} else {
-			header("Content-Type: application/json");
-			$postData = file_get_contents('php://input');
-			$data = json_decode($postData, true);
-			if (isset($data) && isset($_GET['id_team'])) {
-				$stmt = $conn->prepare("UPDATE teams SET number=?, name=? WHERE id=?");
-				$stmt->bind_param("isi", $data["number"], $data["name"], $_GET['id_team']);
-				if (!$stmt->execute()) {
-					die(json_encode(["error" => $stmt->error]));
+		$idUserType = $_SESSION('id_user_type');
+		if(isset($idUserType))
+		{
+			if($idUserType == "2") {
+				if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
+					http_response_code(501);
+					echo json_encode(["error" => "Server support only json request"]);
 				} else {
-					http_response_code(201);
-					echo json_encode([
-						"id" => $_GET['id_team'], "number" => $data['number'],
-						"name" => $data['name']
-					]);
+					header("Content-Type: application/json");
+					$postData = file_get_contents('php://input');
+					$data = json_decode($postData, true);
+					if (isset($data) && isset($_GET['id_team'])) {
+						$stmt = $conn->prepare("UPDATE teams SET number=?, name=? WHERE id=?");
+						$stmt->bind_param("isi", $data["number"], $data["name"], $_GET['id_team']);
+						if (!$stmt->execute()) {
+							die(json_encode(["error" => $stmt->error]));
+						} else {
+							http_response_code(201);
+							echo json_encode([
+								"id" => $_GET['id_team'], "number" => $data['number'],
+								"name" => $data['name']
+							]);
+						}
+					} else {
+						http_response_code(204);
+						echo json_encode(["error" => "No Сontent"]);
+					}
 				}
-			} else {
-				http_response_code(204);
-				echo json_encode(["error" => "No Сontent"]);
+			}
+			else {
+				http_response_code(403);
 			}
 		}
 		break;
+		case "DELETE":
+		$idUserType = $_SESSION('id_user_type');
+		if(isset($idUserType))
+		{
+			if($idUserType == "2") {
+					header("Content-type: application/json");
+					if (isset($_GET['id'])) {
+						$stmt = $conn->prepare("DELETE FROM teams WHERE id=?");
+						$stmt->bind_param("i", $_GET['id']);
+						$stmt->execute();
+						if ($stmt->affected_rows > 0) {
+							http_response_code(200);
+						} else {
+							http_response_code(404);
+						}
+						$stmt->close();
+					} else {
+						http_response_code(404);
+					}
+				}
+				else {
+					http_response_code(403);
+				}
+			}
+			break;
 	default:
 		http_response_code(405);
 		echo json_encode(['error' => 'Method not implemented']);
