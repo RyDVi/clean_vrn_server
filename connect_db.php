@@ -2,7 +2,7 @@
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "cleanvrn_1";
+$dbname = "cleanvrn";
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);

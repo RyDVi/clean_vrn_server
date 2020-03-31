@@ -51,103 +51,112 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		break;
 
 	case "POST":
-		$idUserType = $_SESSION('id_user_type');
-		if(isset($idUserType))
+		if(isset($_SESSION['id_user_type']))
 		{
-			if($idUserType == "1") {
-				if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-					http_response_code(501);
-					echo json_encode(["error" => "Server support only json request"]);
-				} else {
-					header("Content-Type: application/json");
-					$postData = file_get_contents('php://input');
-					$data = json_decode($postData, true);
-					if (isset($data) && $_SESSION["id_game"]) {
-						$stmt = $conn->prepare("INSERT INTO users(id_type, lastname, firstname, middlename, email, phone) 
-					VALUES(2,?,?,?,?,?)");
-						$stmt->bind_param("sssss", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"]);
-						if (!$stmt->execute()) {
-							echo json_encode(["error" => $stmt->error]);
-						} else {
-							$stmtGameUser = $conn->prepare("INSERT INTO game_users(id_game, id_user) VALUES (?,?)");
-							$idCreatedUser = $stmt->insert_id;
-							$stmtGameUser->bind_param("ii", $_SESSION["id_game"], $idCreatedUser);
-							if (!$stmtGameUser->execute()) {
-								echo json_encode(["error" => $stmtGameUser->error]);
-							} else {
-								http_response_code(201);
-								echo json_encode([
-									"id" => $stmt->insert_id,  "lastname" => $data["lastname"], "firstname" => $data["firstname"],
-									"middlename" => $data["middlename"], "email" => $data["email"], "phone" => $data["phone"]
-								]);
-							}
-						}
+			if($_SESSION['id_user_type'])
+				if($_SESSION['id_user_type'] === 1) {
+					if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
+						http_response_code(501);
+						echo json_encode(["error" => "Server support only json request"]);
 					} else {
-						http_response_code(204);
-						echo json_encode(["error" => "No Сontent"]);
+						header("Content-Type: application/json");
+						$postData = file_get_contents('php://input');
+						$data = json_decode($postData, true);
+						if (isset($data) && $_SESSION["id_game"]) {
+							$stmt = $conn->prepare("INSERT INTO users(id_type, lastname, firstname, middlename, email, phone) 
+						VALUES(2,?,?,?,?,?)");
+							$stmt->bind_param("sssss", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"]);
+							if (!$stmt->execute()) {
+								echo json_encode(["error" => $stmt->error]);
+							} else {
+								$stmtGameUser = $conn->prepare("INSERT INTO game_users(id_game, id_user) VALUES (?,?)");
+								$idCreatedUser = $stmt->insert_id;
+								$stmtGameUser->bind_param("ii", $_SESSION["id_game"], $idCreatedUser);
+								if (!$stmtGameUser->execute()) {
+									echo json_encode(["error" => $stmtGameUser->error]);
+								} else {
+									http_response_code(201);
+									echo json_encode([
+										"id" => $stmt->insert_id,  "lastname" => $data["lastname"], "firstname" => $data["firstname"],
+										"middlename" => $data["middlename"], "email" => $data["email"], "phone" => $data["phone"]
+									]);
+								}
+							}
+						} else {
+							http_response_code(204);
+							echo json_encode(["error" => "No Сontent"]);
+						}
 					}
+				} else {
+					http_response_code(403);
+					echo json_encode(["error" => "No Сontent"]);
 				}
-			}
-			else {
-				http_response_code(403);
-			}
+		} else {
+			http_response_code(403);
+			echo json_encode(["error" => "Unauthorized"]);
 		}
 		break;
 	case "PUT":
-		$idUserType = $_SESSION('id_user_type');
-		if(isset($idUserType))
+		if(isset($_SESSION['id_user_type']))
 		{
-			if($idUserType == "1") {
-				if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-					http_response_code(501);
-					echo json_encode(["error" => "Server support only json request"]);
-				} else {
-					header("Content-Type: application/json");
-					$postData = file_get_contents('php://input');
-					$data = json_decode($postData, true);
-					if (isset($data) && $_GET["id"]) {
-						$stmt = $conn->prepare("UPDATE users SET lastname=?, firstname=?, middlename=?, email=?, phone=? WHERE id=?");
-						$stmt->bind_param("sssssi", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"], $_GET["id"]);
-						if (!$stmt->execute()) {
-							echo json_encode(["error" => $stmt->error]);
-						} else {
-							http_response_code(201);
-							echo json_encode(['session_id' => 'PHPSESSID=' . session_id(), 'id_user_type' => null, 'id_user' => null]);
-						}
+			if($_SESSION['id_user_type'])
+				if($_SESSION['id_user_type'] === 1) {
+					if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
+						http_response_code(501);
+						echo json_encode(["error" => "Server support only json request"]);
 					} else {
-						http_response_code(204);
-						echo json_encode(["error" => "No Сontent"]);
+						header("Content-Type: application/json");
+						$postData = file_get_contents('php://input');
+						$data = json_decode($postData, true);
+						if (isset($data) && $_GET["id"]) {
+							$stmt = $conn->prepare("UPDATE users SET lastname=?, firstname=?, middlename=?, email=?, phone=? WHERE id=?");
+							$stmt->bind_param("sssssi", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"], $_GET["id"]);
+							if (!$stmt->execute()) {
+								echo json_encode(["error" => $stmt->error]);
+							} else {
+								http_response_code(201);
+								echo json_encode(['session_id' => 'PHPSESSID=' . session_id(), 'id_user_type' => null, 'id_user' => null]);
+							}
+						} else {
+							http_response_code(204);
+							echo json_encode(["error" => "No Сontent"]);
+						}
 					}
+				} else {
+					http_response_code(403);
+					echo json_encode(["error" => "No Сontent"]);
 				}
-			}
-			else {
-				http_response_code(403);
-			}
+		} else {
+			http_response_code(403);
+			echo json_encode(["error" => "Unauthorized"]);
 		}
 		break;
 		case "DELETE":
-			$idUserType = $_SESSION('id_user_type');
-			if(isset($idUserType))
+			if(isset($_SESSION['id_user_type']))
 			{
-				if($idUserType == "1") {
-					header("Content-type: application/json");
-					if (isset($_GET['id'])) {
-						$stmt = $conn->prepare("DELETE FROM users WHERE id=?");
-						$stmt->bind_param("i", $_GET['id']);
-						$stmt->execute();
-						if ($stmt->affected_rows > 0) {
-							http_response_code(200);
+				if($_SESSION['id_user_type'])
+					if($_SESSION['id_user_type'] === 1) {
+						header("Content-type: application/json");
+						if (isset($_GET['id'])) {
+							$stmt = $conn->prepare("DELETE FROM users WHERE id=?");
+							$stmt->bind_param("i", $_GET['id']);
+							$stmt->execute();
+							if ($stmt->affected_rows > 0) {
+								http_response_code(200);
+							} else {
+								http_response_code(404);
+							}
+							$stmt->close();
 						} else {
 							http_response_code(404);
 						}
-						$stmt->close();
 					} else {
-						http_response_code(404);
+						http_response_code(403);
+						echo json_encode(["error" => "No Сontent"]);
 					}
-				}
-				else {
-					http_response_code(403);
-				}
+			} else {
+				http_response_code(403);
+				echo json_encode(["error" => "Unauthorized"]);
 			}
 			break;
 	default:
