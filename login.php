@@ -9,8 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
         $password = md5($data["password"]);
         $stmt->bind_param("ss", $data["username"], $password);
         if (!$stmt->execute()) {
-            http_response_code(500);
-            json_encode(["msg" => $stmt->error, "code" => null]);
+            echoError(5001);
         } else {
             $stmt->bind_result($id, $idUserType, $firstname, $lastname, $middlename, $email, $phone);
             if ($stmt->fetch()) {
@@ -22,19 +21,16 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                     'middlename' => $middlename, 'email' => $email, 'phone' => $phone
                 ]);
             } else {
-                http_response_code(401);
-                echo json_encode(["msg" => "Логин или пароль введен неверно", "code" => null]);
+                echoError(4011);
             }
         }
     } else if (isset($data['is_player'])) {
         http_response_code(200);
         echo json_encode(['session_id' => 'PHPSESSID=' . session_id(), 'id_user_type' => 3]);
     } else if (!isset($data['username']) && !isset($data['password'])) {
-        http_response_code(401);
-        echo json_encode(["msg" => "Не введен логин или пароль ", "code" => null]);
+        echoError(4012);
     }
 } else {
-    http_response_code(405);
-    echo 'Method not implemented';
+    echoError(4051);
 }
 $conn->close();

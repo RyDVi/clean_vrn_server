@@ -1,38 +1,32 @@
 <?php
-// https://www.php.net/manual/ru/function.http-response-code.php - коды ошибок
-// https://restfulapi.net/http-methods/ - описание методов и ответов, которые должны возвращаться
-// https://laravel.ru/ - php фреймворк для написания REST API
-// Проверка гит
-include("connect_db.php"); //Подключаем все параметры из connect_db.php
-// Check connection
-if ($conn->connect_error) {
-	die("Connection failed: " . $conn->connect_error); //die прекращает работу php и выводит указанное сообщение об ошибке
-}
+include("connect_db.php");
 
+header("Content-Type: application/json");
 switch ($_SERVER['REQUEST_METHOD']) {
-	case "GET": //GET-запрос - это запросы на получение данных
-		header("Content-type: application/json");
+	case "GET":
 		if (!empty($_GET['id'])) {
 			$id_person = $_GET['id'];
-			$stmt = $conn->prepare("SELECT * FROM games WHERE id=?"); //запрос к базе данных
-			$stmt->bind_param("i", $id_person); //Заменяем ? на переменную id_person типа i (integer)
-			$stmt->execute(); //Выполняем запрос
-			$stmt->bind_result($id, $id_status, $name, $description, $route, $datetime); //называем переменные, куда заносятся данные
-			if ($stmt->fetch()) { // Выбираем следующие значения (следующую строку), при это возвращается bool значение
-				header("Content-Type: application/json"); //Указываем, что возвращаем данные в виде JSON объекта
-				http_response_code(200);
-				//Сериализация данных в JSON формат
-				$data = json_encode([
-					"id" => $id, "id_status" => $id_status, "name" => $name, "description" => $description,
-					"route" => $route, "datetime" => $datetime
-				]);
-				echo $data; //Возвращаем данные (отправляем данные клиенту, который производил запрос)
+			$stmt = $conn->prepare("SELECT * FROM games WHERE id=?");
+			$stmt->bind_param("i", $id_person);
+			if (!$stmt->execute()) {
+				echoError(5002);
 			} else {
-				http_response_code(404);
+				$stmt->bind_result($id, $id_status, $name, $description, $route, $datetime);
+				if ($stmt->fetch()) {
+					http_response_code(200);
+					echo json_encode([
+						"id" => $id, "id_status" => $id_status, "name" => $name, "description" => $description,
+						"route" => $route, "datetime" => $datetime
+					]);
+				} else {
+					echoError(4041);
+				}
 			}
 		} else {
 			$stmt = $conn->prepare("SELECT * FROM games");
-			$stmt->execute();
+			if (!$stmt->execute()) {
+				echoError(5002);
+			}
 			$stmt->bind_result($id, $id_status, $name, $description, $route, $datetime);
 			$data = [];
 			while ($stmt->fetch()) {
@@ -41,115 +35,97 @@ switch ($_SERVER['REQUEST_METHOD']) {
 					"route" => $route, "datetime" => $datetime
 				]);
 			}
+			http_response_code(200);
 			echo json_encode($data);
 		}
 		break;
-
 	case "POST":
-		if(isset($_SESSION['id_user_type']))
-		{
-			if($_SESSION['id_user_type'])
-				if($_SESSION['id_user_type'] === 1) {
-					if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-						http_response_code(501);
-						die(json_encode(["error" => "Server support only json request"]));
-					}
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'] === 1) {
+				if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
+					echoError(5011);
+				} else {
 					$postData = file_get_contents('php://input');
 					$data = json_decode($postData, true);
-					header("Content-Type: application/json");
 					if (isset($data)) {
 						$stmt = $conn->prepare("INSERT INTO games(id_status, name, route, datetime) VALUES(1, ?, ?, ?)");
 						$stmt->bind_param("sss", $data["name"],  $data["route"], $data["datetime"]);
 						if (!$stmt->execute()) {
-							die(json_encode(["error" => $stmt->error]));
+							echoError(5002);
+						} else {
+							http_response_code(201);
+							echo json_encode([
+								"id" => $stmt->insert_id, "name" => $data['name'],
+								"route" => $data['route'], "datetime" => $data['datetime']
+							]);
 						}
-						http_response_code(201);
-						echo json_encode([
-							"id" => $stmt->insert_id, "name" => $data['name'],
-							"route" => $data['route'], "datetime" => $data['datetime']
-						]);
 					} else {
-						http_response_code(204);
-						echo json_encode(["error" => "No Сontent"]);
+						echoError(4001);
 					}
-				} else {
-					http_response_code(403);
-					echo json_encode(["error" => "No Сontent"]);
 				}
+			} else {
+				echoError(4031);
+			}
 		} else {
-			http_response_code(403);
-			echo json_encode(["error" => "Unauthorized"]);
+			echoError(4013);
 		}
 		break;
 	case "PUT":
-		if(isset($_SESSION['id_user_type']))
-		{
-			if($_SESSION['id_user_type'])
-				if($_SESSION['id_user_type'] === 1) {
-					if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-						http_response_code(501);
-						echo json_encode(["error" => "Server support only json request"]);
-					} else {
-						$postData = file_get_contents('php://input');
-						$data = json_decode($postData, true);
-						header("Content-Type: application/json");
-						if (isset($data) && isset($_GET['id_game'])) {
-							$stmt = $conn->prepare("UPDATE games SET name=?,  route=?, datetime=?  WHERE id=?");
-							$stmt->bind_param("sssi", $data["name"],  $data["route"], $data["datetime"], $_GET['id_game']);
-							if (!$stmt->execute()) {
-								die(json_encode(["error" => $stmt->error]));
-							} else {
-								http_response_code(201);
-								echo json_encode([
-									"id" => $_GET['id_game'], "name" => $data['name'],
-									"route" => $data['route'], "datetime" => $data['datetime']
-								]);
-							}
-						} else {
-							http_response_code(204);
-							echo json_encode(["error" => "No Сontent"]);
-						}
-					}
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'] === 1) {
+				if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
+					echoError(5011);
 				} else {
-					http_response_code(403);
-					echo json_encode(["error" => "No Сontent"]);
+					$postData = file_get_contents('php://input');
+					$data = json_decode($postData, true);
+					if (isset($data) && isset($_GET['id_game'])) {
+						$stmt = $conn->prepare("UPDATE games SET name=?,  route=?, datetime=?  WHERE id=?");
+						$stmt->bind_param("sssi", $data["name"],  $data["route"], $data["datetime"], $_GET['id_game']);
+						if (!$stmt->execute()) {
+							echoError(5002);
+						} else {
+							http_response_code(201);
+							echo json_encode([
+								"id" => $_GET['id_game'], "name" => $data['name'],
+								"route" => $data['route'], "datetime" => $data['datetime']
+							]);
+						}
+					} else {
+						echoError(4001);
+					}
 				}
+			} else {
+				echoError(4031);
+			}
 		} else {
-			http_response_code(403);
-			echo json_encode(["error" => "Unauthorized"]);
+			echoError(4013);
 		}
 		break;
 	case "DELETE":
-		if(isset($_SESSION['id_user_type']))
-		{
-			if($_SESSION['id_user_type'])
-				if($_SESSION['id_user_type'] === 1) {
-					header("Content-type: application/json");
-					if (isset($_GET['id'])) {
-						$id_game = $_GET['id'];
-						$stmt = $conn->prepare("DELETE FROM games WHERE id=?");
-						$stmt->bind_param("i", $id_game);
-						$stmt->execute();
-						if ($stmt->affected_rows > 0) {
-							http_response_code(200);
-						} else {
-							http_response_code(404);
-						}
-						$stmt->close();
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'] === 1) {
+				if (isset($_GET['id_game'])) {
+					$id_game = $_GET['id_game'];
+					$stmt = $conn->prepare("DELETE FROM games WHERE id=?");
+					$stmt->bind_param("i", $id_game);
+					$stmt->execute();
+					if ($stmt->affected_rows > 0) {
+						http_response_code(200);
 					} else {
-						http_response_code(404);
+						echoError(4041);
 					}
+					$stmt->close();
 				} else {
-					http_response_code(403);
-					echo json_encode(["error" => "No Сontent"]);
+					echoError(4001);
 				}
+			} else {
+				echoError(4031);
+			}
 		} else {
-			http_response_code(403);
-			echo json_encode(["error" => "Unauthorized"]);
+			echoError(4013);
 		}
 		break;
 	default:
-		http_response_code(405);
-		echo 'Method not implemented';
+		echoError(5001);
 }
 $conn->close();
