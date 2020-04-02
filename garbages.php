@@ -2,7 +2,7 @@
 include("connect_db.php");
 // Check connection
 if ($conn->connect_error) {
-    echo json_encode(['error' => "Connection failed: " . $conn->connect_error]);
+    echoError(5003);
 } else {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmtGarbages = $conn->prepare("SELECT id, name FROM garbages");
@@ -16,8 +16,7 @@ if ($conn->connect_error) {
         http_response_code(200);
         echo json_encode($garbages);
     } else {
-        http_response_code(405);
-        echo json_encode(['error' => "Method not implemented"]);
+        echoError(4051);
     }
     $conn->close();
 }

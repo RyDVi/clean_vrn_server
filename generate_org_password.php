@@ -2,7 +2,7 @@
 include("connect_db.php");
 // Check connection
 if ($conn->connect_error) {
-	echo json_encode(["error" => "Connection failed: " . $conn->connect_error]);
+	echoError(5003);
 } else {
 	header("Content-type: application/json");
 	switch ($_SERVER['REQUEST_METHOD']) {
@@ -16,17 +16,14 @@ if ($conn->connect_error) {
 					http_response_code(200);
 					echo json_encode(["password" => $password]);
 				} else {
-					http_response_code(500);
-					echo json_encode(["error" => $stmt->error]);
+					echoError(5002);
 				}
 			} else {
-				http_response_code(500);
-				echo json_encode(["error" => "id not found"]);
+				echoError(4041);
 			}
 			break;
 		default:
-			http_response_code(405);
-			echo 'Method not implemented';
+			echoError(4051);
 	}
 }
 $conn->close();

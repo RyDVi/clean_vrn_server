@@ -10,6 +10,10 @@ function echoError($errorCode)
             http_response_code(400);
             echoCustomError("Неверные входные данные", 4001);
             break;
+        case 4002:
+            http_response_code(400);
+            echoCustomError("Игра не выбрана", 4002);
+            break;
         case 4011:
             http_response_code(401);
             echoCustomError("Логин или пароль введен неверно", 4011);

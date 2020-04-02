@@ -5,12 +5,11 @@
 include("connect_db.php"); //Подключаем все параметры из connect_db.php
 // Check connection
 if ($conn->connect_error) {
-	die("Connection failed: " . $conn->connect_error); //die прекращает работу php и выводит указанное сообщение об ошибке
+	echoError(5003);
 }
-
+header("Content-type: application/json");
 switch ($_SERVER['REQUEST_METHOD']) {
 	case "GET": //GET-запрос - это запросы на получение данных
-		header("Content-type: application/json");
 		if (!empty($_GET['id'])) {
 			$id_team = $_GET['id'];
 			$stmt = $conn->prepare("SELECT * FROM teams WHERE id=?"); //запрос к базе данных
@@ -18,7 +17,6 @@ switch ($_SERVER['REQUEST_METHOD']) {
 			$stmt->execute(); //Выполняем запрос
 			$stmt->bind_result($id, $number, $name); //называем переменные, куда заносятся данные
 			if ($stmt->fetch()) { // Выбираем следующие значения (следующую строку), при это возвращается bool значение
-				header("Content-Type: application/json"); //Указываем, что возвращаем данные в виде JSON объекта
 				http_response_code(200);
 				//Сериализация данных в JSON формат
 				$data = json_encode([
@@ -26,7 +24,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				]);
 				echo $data; //Возвращаем данные (отправляем данные клиенту, который производил запрос)
 			} else {
-				http_response_code(404);
+				echoError(4041);
 			}
 			$stmt->close(); //Завершение запроса
 		} else {
@@ -63,19 +61,17 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				}
 				echo json_encode($teamsGarbages);
 			} else {
-				echo json_encode(['error' => "Session id of game or id_team not found"]);
+				echoError(4002);
 			}
 		}
 		break;
 
 	case "POST":
-		if(isset($_SESSION['id_user_type']))
-		{
-			if($_SESSION['id_user_type'])
-				if($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'])
+				if ($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
 					if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-						http_response_code(501);
-						die(json_encode(["error" => "Server support only json request"]));
+						echoError(5011);
 					}
 					$postData = file_get_contents('php://input');
 					$data = json_decode($postData, true);
@@ -84,38 +80,32 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						VALUES(?,?,?,?)");
 						$stmt->bind_param("sssd", $data["lastname"], $data["name"], $data["middlename"], $data["date_of_birth"]);
 						if (!$stmt->execute()) {
-							die(json_encode(["error" => $stmt->error]));
+							echoError(5002);
 						}
-						header("Content-Type: application/json");
 						http_response_code(201);
 						$data = json_encode(["id" => $stmt->insert_id]); //в insert_id находится сгенерированный ИД
 						echo $data;
 					} else {
-						http_response_code(204);
-						die(json_encode(["error" => "No Сontent"]));
+						echoError(4001);
 					}
 				} else {
-					http_response_code(403);
-					echo json_encode(["error" => "No Сontent"]);
+					echoError(4031);
 				}
 		} else {
-			http_response_code(403);
-			echo json_encode(["error" => "Unauthorized"]);
+			echoError(4031);
 		}
 		break;
 	case "PUT":
-		if(isset($_SESSION['id_user_type']))
-		{
-			if($_SESSION['id_user_type'])
-				if($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'])
+				if ($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
 					if ($_SERVER["CONTENT_TYPE"] != 'application/json') {
-						http_response_code(501);
-						echo json_encode(["error" => "Server support only json request"]);
+						echoError(5011);
 					} else {
 						$postData = file_get_contents('php://input');
 						$data = json_decode($postData, true);
 						if (isset($_GET['id_team']) && isset($data)) {
-							foreach ($data['collected_garbages'] as &$collected_garbage) {
+							foreach ($data['collщзжected_garbages'] as &$collected_garbage) {
 								$stmt = null;
 								if (!isset($collected_garbage['id_collected_garbage'])) {
 									$stmt = $conn->prepare("INSERT INTO teams_garbages(id_team, id_garbage, count) VALUES (?,?,?)");
@@ -131,50 +121,41 @@ switch ($_SERVER['REQUEST_METHOD']) {
 									//TODO: unknown
 								}
 							}
-							header("Content-Type: application/json");
 							http_response_code(200);
-							echo json_encode(['session_id' => 'PHPSESSID=' . session_id(), 'id_user_type' => null, 'id_user' => null]);
 						}
 					}
 				} else {
-					http_response_code(403);
-					echo json_encode(["error" => "No Сontent"]);
+					echoError(4031);
 				}
 		} else {
-			http_response_code(403);
-			echo json_encode(["error" => "Unauthorized"]);
+			echoError(4031);
 		}
 		break;
-		case "DELETE":
-			if(isset($_SESSION['id_user_type']))
-			{
-				if($_SESSION['id_user_type'])
-					if($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
-						header("Content-type: application/json");
-						if (isset($_GET['id'])) {
-							$stmt = $conn->prepare("DELETE FROM teams_garbages WHERE id=?");
-							$stmt->bind_param("i", $_GET['id']);
-							$stmt->execute();
-							if ($stmt->affected_rows > 0) {
-								http_response_code(200);
-							} else {
-								http_response_code(404);
-							}
-							$stmt->close();
+	case "DELETE":
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'])
+				if ($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
+					if (isset($_GET['id'])) {
+						$stmt = $conn->prepare("DELETE FROM teams_garbages WHERE id=?");
+						$stmt->bind_param("i", $_GET['id']);
+						$stmt->execute();
+						if ($stmt->affected_rows > 0) {
+							http_response_code(200);
 						} else {
-							http_response_code(404);
+							echoError(4041);
 						}
+						$stmt->close();
 					} else {
-						http_response_code(403);
-						echo json_encode(["error" => "No Сontent"]);
+						echoError(4041);
 					}
-			} else {
-				http_response_code(403);
-				echo json_encode(["error" => "Unauthorized"]);
-			}
-			break;
+				} else {
+					echoError(4031);
+				}
+		} else {
+			echoError(4031);
+		}
+		break;
 	default:
-		http_response_code(405);
-		echo 'Method not implemented'; //Это в случае, если используется другой метод, который не реализован
+		echoError(4051);
 }
 $conn->close(); //Закрытие соединения (необходимо делать после окончания работы с БД)

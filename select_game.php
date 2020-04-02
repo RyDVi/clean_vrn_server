@@ -18,11 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                 "route" => $route, "datetime" => $datetime
             ]);
         } else {
-            http_response_code(404);
+            echoError(4041);
         }
     }
 } else {
-    http_response_code(405);
-    echo 'Method not implemented';
+    echoError(4051);
 }
 $conn->close();

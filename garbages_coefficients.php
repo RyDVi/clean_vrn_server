@@ -5,12 +5,11 @@
 include("connect_db.php"); //Подключаем все параметры из connect_db.php
 // Check connection
 if ($conn->connect_error) {
-	die("Connection failed: " . $conn->connect_error); //die прекращает работу php и выводит указанное сообщение об ошибке
+	echoError(5003);
 }
-
+header("Content-type: application/json");
 switch ($_SERVER['REQUEST_METHOD']) {
 	case "GET": //GET-запрос - это запросы на получение данных
-		header("Content-type: application/json");
 		if (!empty($_GET['id'])) {
 			$id_team = $_GET['id'];
 			$stmt = $conn->prepare("SELECT * FROM teams WHERE id=?"); //запрос к базе данных
@@ -25,7 +24,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				]);
 				echo $data; //Возвращаем данные (отправляем данные клиенту, который производил запрос)
 			} else {
-				http_response_code(404);
+				echoError(4041);
 			}
 			$stmt->close(); //Завершение запроса
 		} else {
@@ -51,7 +50,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				}
 				echo json_encode($garbagesCoefficients);
 			} else {
-				echo json_encode(['error' => "Game id not found"]);
+				echoError(4041);
 			}
 		}
 		break;
@@ -59,8 +58,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 	case "POST":
 		// echo "Это POST запрос, необходим для вставки новых строк в таблицы";
 		if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-			http_response_code(501);
-			die(json_encode(["error" => "Server support only json request"]));
+			echoError(5011);
 		}
 		$postData = file_get_contents('php://input');
 		$data = json_decode($postData, true);
@@ -70,25 +68,23 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				$stmt = $conn->prepare("INSERT INTO garbage_coefficients(id_garbage, id_game, coefficient) VALUES (?,?,?)");
 				$stmt->bind_param("iii", $coefficients['id_garbage'], $_GET['id_game'], $coefficients['coefficient']);
 				if (!$stmt->execute()) {
-					// die(json_encode(["error" => $stmt->error]));
+					echoError(5002);
+				} else {
+					array_push($createdCoefficient, [
+						"id" => $stmt->insert_id, "id_garbage" => $coefficients['id_garbage'],
+						"id_game" => $_GET['id_game'], "coefficient" => $coefficients['coefficient']
+					]);
 				}
-				array_push($createdCoefficient, [
-					"id" => $stmt->insert_id, "id_garbage" => $coefficients['id_garbage'],
-					"id_game" => $_GET['id_game'], "coefficient" => $coefficients['coefficient']
-				]);
 			}
-			header("Content-Type: application/json");
 			http_response_code(201);
 			echo json_encode($createdCoefficient);
 		} else {
-			http_response_code(204);
-			die(json_encode(["error" => "No Сontent"]));
+			echoError(4001);
 		}
 		break;
 	case "PUT":
 		if ($_SERVER["CONTENT_TYPE"] != 'application/json') {
-			http_response_code(501);
-			echo json_encode(["error" => "Server support only json request"]);
+			echoError(5011);
 		} else {
 			$postData = file_get_contents('php://input');
 			$data = json_decode($postData, true);
@@ -109,14 +105,13 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						//TODO: unknown
 					}
 				}
-				header("Content-Type: application/json");
 				http_response_code(200);
-				echo json_encode(['session_id' => 'PHPSESSID=' . session_id(), 'id_user_type' => null, 'id_user' => null]);
+			} else {
+				echoError(4001);
 			}
 		}
 		break;
 	default:
-		http_response_code(405);
-		echo 'Method not implemented'; //Это в случае, если используется другой метод, который не реализован
+		echoError(4051);
 }
 $conn->close(); //Закрытие соединения (необходимо делать после окончания работы с БД)

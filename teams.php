@@ -5,7 +5,7 @@
 include("connect_db.php"); //Подключаем все параметры из connect_db.php
 // Check connection
 if ($conn->connect_error) {
-	die("Connection failed: " . $conn->connect_error); //die прекращает работу php и выводит указанное сообщение об ошибке
+	echoError(5003);
 }
 
 switch ($_SERVER['REQUEST_METHOD']) {
@@ -26,7 +26,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				]);
 				echo $data; //Возвращаем данные (отправляем данные клиенту, который производил запрос)
 			} else {
-				http_response_code(404);
+				echoError(4041);
 			}
 			$stmt->close(); //Завершение запроса
 		} else {
@@ -60,19 +60,17 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				}
 				echo json_encode($data);
 			} else {
-				echo json_encode(['error' => "Session id of game not found"]);
+				echoError(4002);
 			}
 		}
 		break;
 
 	case "POST":
-		if(isset($_SESSION['id_user_type']))
-		{
-			if($_SESSION['id_user_type'])
-				if($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'])
+				if ($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
 					if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-						http_response_code(501);
-						die(json_encode(["error" => "Server support only json request"]));
+						echoError(5011);
 					}
 					$postData = file_get_contents('php://input');
 					$data = json_decode($postData, true);
@@ -91,7 +89,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 							$stmt->bind_param("si", $data["name"], $_SESSION["id_game"]);
 						}
 						if (!$stmt->execute()) {
-							die(json_encode(["error" => $stmt->error]));
+							echoError(5002);
 						}
 						header("Content-Type: application/json");
 						http_response_code(201);
@@ -100,26 +98,21 @@ switch ($_SERVER['REQUEST_METHOD']) {
 							"name" => $data['name']
 						]);
 					} else {
-						http_response_code(204);
-						echo json_encode(["error" => "No Сontent"]);
+						echoError(4001);
 					}
 				} else {
-					http_response_code(403);
-					echo json_encode(["error" => "No Сontent"]);
+					echoError(4031);
 				}
 		} else {
-			http_response_code(403);
-			echo json_encode(["error" => "Unauthorized"]);
+			echoError(4031);
 		}
 		break;
 	case "PUT":
-		if(isset($_SESSION['id_user_type']))
-		{
-			if($_SESSION['id_user_type'])
-				if($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'])
+				if ($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
 					if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-						http_response_code(501);
-						echo json_encode(["error" => "Server support only json request"]);
+						echoError(5011);
 					} else {
 						header("Content-Type: application/json");
 						$postData = file_get_contents('php://input');
@@ -128,7 +121,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 							$stmt = $conn->prepare("UPDATE teams SET number=?, name=? WHERE id=?");
 							$stmt->bind_param("isi", $data["number"], $data["name"], $_GET['id_team']);
 							if (!$stmt->execute()) {
-								die(json_encode(["error" => $stmt->error]));
+								echoError(5002);
 							} else {
 								http_response_code(201);
 								echo json_encode([
@@ -137,49 +130,42 @@ switch ($_SERVER['REQUEST_METHOD']) {
 								]);
 							}
 						} else {
-							http_response_code(204);
-							echo json_encode(["error" => "No Сontent"]);
+							echoError(4001);
 						}
 					}
 				} else {
-					http_response_code(403);
-					echo json_encode(["error" => "No Сontent"]);
+					echoError(4031);
 				}
 		} else {
-			http_response_code(403);
-			echo json_encode(["error" => "Unauthorized"]);
+			echoError(4031);
 		}
 		break;
-		case "DELETE":
-			if(isset($_SESSION['id_user_type']))
-			{
-				if($_SESSION['id_user_type'])
-					if($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
-						header("Content-type: application/json");
-						if (isset($_GET['id'])) {
-							$stmt = $conn->prepare("DELETE FROM teams WHERE id=?");
-							$stmt->bind_param("i", $_GET['id']);
-							$stmt->execute();
-							if ($stmt->affected_rows > 0) {
-								http_response_code(200);
-							} else {
-								http_response_code(404);
-							}
-							$stmt->close();
+	case "DELETE":
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'])
+				if ($_SESSION['id_user_type'] === 1 || $_SESSION['id_user_type'] === 2) {
+					header("Content-type: application/json");
+					if (isset($_GET['id'])) {
+						$stmt = $conn->prepare("DELETE FROM teams WHERE id=?");
+						$stmt->bind_param("i", $_GET['id']);
+						$stmt->execute();
+						if ($stmt->affected_rows > 0) {
+							http_response_code(200);
 						} else {
-							http_response_code(404);
+							echoError(4041);
 						}
+						$stmt->close();
 					} else {
-						http_response_code(403);
-						echo json_encode(["error" => "No Сontent"]);
+						echoError(4041);
 					}
-			} else {
-				http_response_code(403);
-				echo json_encode(["error" => "Unauthorized"]);
-			}
-			break;
+				} else {
+					echoError(4031);
+				}
+		} else {
+			echoError(4031);
+		}
+		break;
 	default:
-		http_response_code(405);
-		echo json_encode(['error' => 'Method not implemented']);
+		echoError(4051);
 }
 $conn->close();
