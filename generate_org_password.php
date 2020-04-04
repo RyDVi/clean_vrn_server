@@ -1,5 +1,6 @@
 <?php
 include("connect_db.php");
+include("errors.php");
 // Check connection
 if ($conn->connect_error) {
 	echoError(5003);

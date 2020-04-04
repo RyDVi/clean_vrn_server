@@ -2,7 +2,8 @@
 // https://www.php.net/manual/ru/function.http-response-code.php - коды ошибок
 // https://restfulapi.net/http-methods/ - описание методов и ответов, которые должны возвращаться
 // https://laravel.ru/ - php фреймворк для написания REST API
-include("connect_db.php"); //Подключаем все параметры из connect_db.php
+include("connect_db.php");
+include("errors.php"); //Подключаем все параметры из connect_db.php
 // Check connection
 if ($conn->connect_error) {
 	echoError(5003);

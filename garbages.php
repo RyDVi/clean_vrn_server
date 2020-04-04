@@ -1,6 +1,8 @@
 <?php
 include("connect_db.php");
+include("errors.php");
 // Check connection
+header("Content-Type: application/json");
 if ($conn->connect_error) {
     echoError(5003);
 } else {
@@ -12,7 +14,6 @@ if ($conn->connect_error) {
         while ($stmtGarbages->fetch()) {
             array_push($garbages, ["id" => $id, "name" => $name]);
         }
-        header("Content-Type: application/json");
         http_response_code(200);
         echo json_encode($garbages);
     } else {

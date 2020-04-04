@@ -1,5 +1,6 @@
 <?php
 include("connect_db.php");
+include("errors.php");
 $postData = file_get_contents('php://input');
 $data = json_decode($postData, true);
 header("Content-Type: application/json");
