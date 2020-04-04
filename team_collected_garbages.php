@@ -1,33 +1,25 @@
 <?php
-// https://www.php.net/manual/ru/function.http-response-code.php - коды ошибок
-// https://restfulapi.net/http-methods/ - описание методов и ответов, которые должны возвращаться
-// https://laravel.ru/ - php фреймворк для написания REST API
 include("connect_db.php");
-include("errors.php"); //Подключаем все параметры из connect_db.php
-// Check connection
-if ($conn->connect_error) {
-	echoError(5003);
-}
+
 header("Content-type: application/json");
 switch ($_SERVER['REQUEST_METHOD']) {
-	case "GET": //GET-запрос - это запросы на получение данных
+	case "GET":
 		if (!empty($_GET['id'])) {
 			$id_team = $_GET['id'];
-			$stmt = $conn->prepare("SELECT * FROM teams WHERE id=?"); //запрос к базе данных
-			$stmt->bind_param("i", $id_team); //Заменяем ? на переменную id_team типа i (integer)
-			$stmt->execute(); //Выполняем запрос
-			$stmt->bind_result($id, $number, $name); //называем переменные, куда заносятся данные
-			if ($stmt->fetch()) { // Выбираем следующие значения (следующую строку), при это возвращается bool значение
+			$stmt = $conn->prepare("SELECT * FROM teams WHERE id=?");
+			$stmt->bind_param("i", $id_team);
+			$stmt->execute();
+			$stmt->bind_result($id, $number, $name);
+			if ($stmt->fetch()) {
 				http_response_code(200);
-				//Сериализация данных в JSON формат
 				$data = json_encode([
 					"id" => $id, "name" => $name, "number" => $number
 				]);
-				echo $data; //Возвращаем данные (отправляем данные клиенту, который производил запрос)
+				echo $data;
 			} else {
 				echoError(4041);
 			}
-			$stmt->close(); //Завершение запроса
+			$stmt->close();
 		} else {
 			if (isset($_SESSION['id_game']) && isset($_GET['id_team'])) {
 				$stmtGarbages = $conn->prepare("SELECT tg.id, tg.id_team, tg.id_garbage, gc.id_game, 
@@ -84,7 +76,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 							echoError(5002);
 						}
 						http_response_code(201);
-						$data = json_encode(["id" => $stmt->insert_id]); //в insert_id находится сгенерированный ИД
+						$data = json_encode(["id" => $stmt->insert_id]);
 						echo $data;
 					} else {
 						echoError(4001);
@@ -159,4 +151,4 @@ switch ($_SERVER['REQUEST_METHOD']) {
 	default:
 		echoError(4051);
 }
-$conn->close(); //Закрытие соединения (необходимо делать после окончания работы с БД)
+$conn->close();

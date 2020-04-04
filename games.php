@@ -1,6 +1,5 @@
 <?php
 include("connect_db.php");
-include("errors.php");
 
 header("Content-Type: application/json");
 switch ($_SERVER['REQUEST_METHOD']) {
