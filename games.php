@@ -30,9 +30,10 @@ switch ($_SERVER['REQUEST_METHOD']) {
 			$stmt->bind_result($id, $id_status, $name, $description, $route, $datetime);
 			$data = [];
 			while ($stmt->fetch()) {
+				$tempDatetime = DateTime::createFromFormat('Y-m-d H:i:s', $datetime);
 				array_push($data, [
 					"id" => $id, "id_status" => $id_status, "name" => $name, "description" => $description,
-					"route" => $route, "datetime" => $datetime
+					"route" => $route, "datetime" => $tempDatetime->format('Y-m-d\TH:i:s\Z')
 				]);
 			}
 			http_response_code(200);
@@ -143,7 +144,7 @@ $conn->close();
 function date_g(mysqli $conn)
 {
 	$time = date('Y-m-d H:i:s');
-	$stmt = $conn->prepare("SELECT datetime FROM games WHERE gc.id=?");
+	$stmt = $conn->prepare("SELECT datetime FROM games WHERE id=?");
 	$stmt->bind_param('i', $_GET['id']);
 	if (!$stmt->execute()) {
 		echoError(5002);
