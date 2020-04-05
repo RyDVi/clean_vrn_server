@@ -40,6 +40,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		}
 		break;
 	case "POST":
+		if (date_g($conn)) {
 		if (isset($_SESSION['id_user_type'])) {
 			if ($_SESSION['id_user_type'] === 1) {
 				if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
@@ -69,8 +70,12 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		} else {
 			echoError(4013);
 		}
+	} else {
+		echoError(4003);
+	}
 		break;
 	case "PUT":
+		if (date_g($conn)) {
 		if (isset($_SESSION['id_user_type'])) {
 			if ($_SESSION['id_user_type'] === 1) {
 				if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
@@ -99,6 +104,9 @@ switch ($_SERVER['REQUEST_METHOD']) {
 			}
 		} else {
 			echoError(4013);
+		}
+	} else {
+			echoError(4003);
 		}
 		break;
 	case "DELETE":
@@ -129,3 +137,23 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		echoError(5001);
 }
 $conn->close();
+/**
+ * Проверка на совпадение времени
+ */
+function date_g(mysqli $conn)
+{
+	$time = date('Y-m-d H:i:s');
+	$stmt = $conn->prepare("SELECT datetime FROM games WHERE gc.id=?");
+	$stmt->bind_param('i', $_GET['id']);
+	if (!$stmt->execute()) {
+		echoError(5002);
+	} else {
+		$stmt->bind_result($datetime_g);
+		$stmt->fetch();
+		if (strtotime($time) < strtotime($datetime_g)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
