@@ -55,24 +55,28 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						$postData = file_get_contents('php://input');
 						$data = json_decode($postData, true);
 						if (isset($data) && $_SESSION["id_game"]) {
-							$stmt = $conn->prepare("INSERT INTO users(id_type, lastname, firstname, middlename, email, phone) 
-						VALUES(2,?,?,?,?,?)");
-							$stmt->bind_param("sssss", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"]);
-							if (!$stmt->execute()) {
-								echoError(5002);
-							} else {
-								$stmtGameUser = $conn->prepare("INSERT INTO game_users(id_game, id_user) VALUES (?,?)");
-								$idCreatedUser = $stmt->insert_id;
-								$stmtGameUser->bind_param("ii", $_SESSION["id_game"], $idCreatedUser);
-								if (!$stmtGameUser->execute()) {
+							if (checkEmailPhone($conn, $data["email"], $data["phone"])) {
+								$stmt = $conn->prepare("INSERT INTO users(id_type, lastname, firstname, middlename, email, phone) 
+								VALUES(2,?,?,?,?,?)");
+								$stmt->bind_param("sssss", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"]);
+								if (!$stmt->execute()) {
 									echoError(5002);
 								} else {
-									http_response_code(201);
-									echo json_encode([
-										"id" => $stmt->insert_id,  "lastname" => $data["lastname"], "firstname" => $data["firstname"],
-										"middlename" => $data["middlename"], "email" => $data["email"], "phone" => $data["phone"]
-									]);
+									$stmtGameUser = $conn->prepare("INSERT INTO game_users(id_game, id_user) VALUES (?,?)");
+									$idCreatedUser = $stmt->insert_id;
+									$stmtGameUser->bind_param("ii", $_SESSION["id_game"], $idCreatedUser);
+									if (!$stmtGameUser->execute()) {
+										echoError(5002);
+									} else {
+										http_response_code(201);
+										echo json_encode([
+											"id" => $stmt->insert_id,  "lastname" => $data["lastname"], "firstname" => $data["firstname"],
+											"middlename" => $data["middlename"], "email" => $data["email"], "phone" => $data["phone"]
+										]);
+									}
 								}
+							} else {
+								echoError(4004);
 							}
 						} else {
 							echoError(4001);
@@ -95,13 +99,17 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						$postData = file_get_contents('php://input');
 						$data = json_decode($postData, true);
 						if (isset($data) && $_GET["id"]) {
-							$stmt = $conn->prepare("UPDATE users SET lastname=?, firstname=?, middlename=?, email=?, phone=? WHERE id=?");
-							$stmt->bind_param("sssssi", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"], $_GET["id"]);
-							if (!$stmt->execute()) {
-								echoError(5002);
+							if (checkEmailPhone($conn, $data["email"], $data["phone"])) {
+								$stmt = $conn->prepare("UPDATE users SET lastname=?, firstname=?, middlename=?, email=?, phone=? WHERE id=?");
+								$stmt->bind_param("sssssi", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"], $_GET["id"]);
+								if (!$stmt->execute()) {
+									echoError(5002);
+								} else {
+									http_response_code(201);
+									echo json_encode(['session_id' => 'PHPSESSID=' . session_id(), 'id_user_type' => null, 'id_user' => null]);
+								}
 							} else {
-								http_response_code(201);
-								echo json_encode(['session_id' => 'PHPSESSID=' . session_id(), 'id_user_type' => null, 'id_user' => null]);
+								echoError(4004);
 							}
 						} else {
 							echoError(4001);
@@ -142,21 +150,17 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		echoError(4051);
 }
 $conn->close();
-function CheckEmailPhone(mysqli $conn)
+
+function checkEmailPhone(mysqli $conn, $CheckEmail, $CheckPhone)
 {
-	$stmt = $conn->prepare("SELECT d FROM organizators");
+	$stmt = $conn->prepare("SELECT * FROM users WHERE email=? or phone=?");
+	$stmt->bind_param('ss', $CheckEmail, $CheckPhone);
 	if (!$stmt->execute()) {
 		echoError(5002);
 	}
-	$stmt->bind_result($id, $id_status, $name, $description, $route, $datetime);
-	$data = [];
-	while ($stmt->fetch()) {
-		$tempDatetime = DateTime::createFromFormat('Y-m-d H:i:s', $datetime);
-		array_push($data, [
-			"id" => $id, "id_status" => $id_status, "name" => $name, "description" => $description,
-			"route" => $route, "datetime" => $tempDatetime->format('Y-m-d\TH:i:s\Z')
-		]);
-	}
-	http_response_code(200);
-	echo json_encode($data);
+	$tr = true;
+	if ($stmt->fetch())
+		$tr = false;
+
+	return $tr;
 }

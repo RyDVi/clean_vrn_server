@@ -18,6 +18,14 @@ function echoError($errorCode)
             http_response_code(400);
             echoCustomError("Игра начата", 4003);
             break;
+        case 4004:
+            http_response_code(400);
+            echoCustomError("Почта или телефон уже используются", 4004);
+            break;
+        case 4005:
+            http_response_code(400);
+            echoCustomError("Номер команды уже используется", 4005);
+            break;
         case 4011:
             http_response_code(401);
             echoCustomError("Логин или пароль введен неверно", 4011);

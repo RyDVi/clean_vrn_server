@@ -70,14 +70,9 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
 						$stmt->bind_param("isi", $data["number"], $data["name"], $_SESSION["id_game"]);
 					} else {
-						//TODO: сделать генерацию номера команды
-						// $stmtTeamsNumbers = $conn->prepare("SELECT number FROM teams WHERE id_game=?");
-						// $stmt->bind_param('i', $data['id_game']);
-						// $stmt->bind_result($number);
-						// while ($stmt->fetch()) {
-						// }
-						$stmt = $conn->prepare("INSERT INTO teams(name, id_game) VALUES(?,?)");
-						$stmt->bind_param("si", $data["name"], $_SESSION["id_game"]);
+						$data["number"] = generateNumber($conn);
+						$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
+						$stmt->bind_param("isi", $data["number"], $data["name"], $_SESSION["id_game"]);
 					}
 					if (!$stmt->execute()) {
 						echoError(5002);
@@ -108,19 +103,23 @@ switch ($_SERVER['REQUEST_METHOD']) {
 					$postData = file_get_contents('php://input');
 					$data = json_decode($postData, true);
 					if (isset($data) && isset($_GET['id_team'])) {
-						$stmt = $conn->prepare("UPDATE teams SET number=?, name=? WHERE id=?");
-						$stmt->bind_param("isi", $data["number"], $data["name"], $_GET['id_team']);
-						if (!$stmt->execute()) {
-							echoError(5002);
+						if (checkNumber($conn, $data['number'])) {
+							$stmt = $conn->prepare("UPDATE teams SET number=?, name=? WHERE id=?");
+							$stmt->bind_param("isi", $data["number"], $data["name"], $_GET['id_team']);
+							if (!$stmt->execute()) {
+								echoError(5002);
+							} else {
+								http_response_code(201);
+								echo json_encode([
+									"id" => $_GET['id_team'], "number" => $data['number'],
+									"name" => $data['name']
+								]);
+							}
 						} else {
-							http_response_code(201);
-							echo json_encode([
-								"id" => $_GET['id_team'], "number" => $data['number'],
-								"name" => $data['name']
-							]);
+							echoError(4001);
 						}
 					} else {
-						echoError(4001);
+						echoError(4005);
 					}
 				}
 			} else {
@@ -158,3 +157,40 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		echoError(4051);
 }
 $conn->close();
+function checkNumber(mysqli $conn, $CheckNumber)
+{
+	$stmt = $conn->prepare("SELECT * FROM teams WHERE number=?");
+	$stmt->bind_param('i', $CheckNumber);
+	if (!$stmt->execute()) {
+		echoError(5002);
+	}
+	$tr = true;
+	if ($stmt->fetch())
+		$tr = false;
+
+	return $tr;
+}
+
+function generateNumber(mysqli $conn)
+{
+	$isNumberFinded = false;
+	$numb = 0;
+	$stmt = $conn->prepare("SELECT number FROM teams");
+	if (!$stmt->execute()) {
+		echoError(5002);
+	}
+	$stmt->bind_result($number);
+	$date = [];
+	while ($stmt->fetch())
+		array_push($date, $number);
+	while (!$isNumberFinded) {
+		$numb++;
+		$isNumberFinded = true;
+		foreach ($date as &$i) {
+			if ($numb === $i) {
+				$isNumberFinded = false;
+			} 
+		}
+	}
+	return $numb;
+}
