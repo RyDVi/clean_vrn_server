@@ -55,7 +55,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						$postData = file_get_contents('php://input');
 						$data = json_decode($postData, true);
 						if (isset($data) && $_SESSION["id_game"]) {
-							if (checkEmailPhone($conn, $data["email"], $data["phone"])) {
+							if (checkEmailPhone($conn, $data["email"], $data["phone"], $_GET["id"])) {
 								$stmt = $conn->prepare("INSERT INTO users(id_type, lastname, firstname, middlename, email, phone) 
 								VALUES(2,?,?,?,?,?)");
 								$stmt->bind_param("sssss", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"]);
@@ -99,7 +99,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						$postData = file_get_contents('php://input');
 						$data = json_decode($postData, true);
 						if (isset($data) && $_GET["id"]) {
-							if (checkEmailPhone($conn, $data["email"], $data["phone"])) {
+							if (checkEmailPhone($conn, $data["email"], $data["phone"], $_GET["id"])) {
 								$stmt = $conn->prepare("UPDATE users SET lastname=?, firstname=?, middlename=?, email=?, phone=? WHERE id=?");
 								$stmt->bind_param("sssssi", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"], $_GET["id"]);
 								if (!$stmt->execute()) {
@@ -151,10 +151,10 @@ switch ($_SERVER['REQUEST_METHOD']) {
 }
 $conn->close();
 
-function checkEmailPhone(mysqli $conn, $CheckEmail, $CheckPhone)
+function checkEmailPhone(mysqli $conn, $CheckEmail, $CheckPhone, $idGame)
 {
-	$stmt = $conn->prepare("SELECT * FROM users WHERE email=? or phone=?");
-	$stmt->bind_param('ss', $CheckEmail, $CheckPhone);
+	$stmt = $conn->prepare("SELECT * FROM users WHERE (email=? or phone=?) AND id!=?");
+	$stmt->bind_param('ssi', $CheckEmail, $CheckPhone, $idGame);
 	if (!$stmt->execute()) {
 		echoError(5002);
 	}
