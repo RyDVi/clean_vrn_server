@@ -26,6 +26,14 @@ function echoError($errorCode)
             http_response_code(400);
             echoCustomError("Номер команды уже используется", 4005);
             break;
+        case 4006:
+            http_response_code(400);
+            echoCustomError("Точка старта уже существует", 4006);
+            break;
+        case 4007:
+            http_response_code(400);
+            echoCustomError("Область уже существует", 4007);
+            break;
         case 4011:
             http_response_code(401);
             echoCustomError("Логин или пароль введен неверно", 4011);
