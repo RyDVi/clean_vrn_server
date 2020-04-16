@@ -55,7 +55,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						$postData = file_get_contents('php://input');
 						$data = json_decode($postData, true);
 						if (isset($data) && $_SESSION["id_game"]) {
-							if (checkEmailPhone($conn, $data["email"], $data["phone"], $_GET["id"])) {
+							if (checkEmailPhone($conn, $data["email"], $data["phone"], $_SESSION["id_game"])) {
 								$stmt = $conn->prepare("INSERT INTO users(id_type, lastname, firstname, middlename, email, phone) 
 								VALUES(2,?,?,?,?,?)");
 								$stmt->bind_param("sssss", $data["lastname"], $data["firstname"], $data["middlename"], $data["email"], $data["phone"]);

@@ -103,7 +103,10 @@ switch ($_SERVER['REQUEST_METHOD']) {
 					$postData = file_get_contents('php://input');
 					$data = json_decode($postData, true);
 					if (isset($data) && isset($_GET['id_team'])) {
-						if (checkNumber($conn, $data['number'])) {
+						if (!isset($data["number"])) {
+							$data["number"] = generateNumber($conn);
+						}
+						if (checkNumber($conn, $data['number'], $_GET["id_team"])) {
 							$stmt = $conn->prepare("UPDATE teams SET number=?, name=? WHERE id=?");
 							$stmt->bind_param("isi", $data["number"], $data["name"], $_GET['id_team']);
 							if (!$stmt->execute()) {
@@ -116,10 +119,10 @@ switch ($_SERVER['REQUEST_METHOD']) {
 								]);
 							}
 						} else {
-							echoError(4001);
+							echoError(4005);
 						}
 					} else {
-						echoError(4005);
+						echoError(4001);
 					}
 				}
 			} else {
@@ -157,10 +160,10 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		echoError(4051);
 }
 $conn->close();
-function checkNumber(mysqli $conn, $CheckNumber)
+function checkNumber(mysqli $conn, $CheckNumber, $idTeam)
 {
-	$stmt = $conn->prepare("SELECT * FROM teams WHERE number=?");
-	$stmt->bind_param('i', $CheckNumber);
+	$stmt = $conn->prepare("SELECT * FROM teams WHERE number=? AND $idTeam!=?");
+	$stmt->bind_param('ii', $CheckNumber, $idTeam);
 	if (!$stmt->execute()) {
 		echoError(5002);
 	}
@@ -189,7 +192,7 @@ function generateNumber(mysqli $conn)
 		foreach ($date as &$i) {
 			if ($numb === $i) {
 				$isNumberFinded = false;
-			} 
+			}
 		}
 	}
 	return $numb;

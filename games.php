@@ -62,7 +62,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		}
 		break;
 	case "POST":
-		if (date_g($conn)) {
+		if (strtotime($data["datetime"]) < strtotime(date('Y-m-d H:i:s'))) {
 			if (isset($_SESSION['id_user_type'])) {
 				if ($_SESSION['id_user_type'] === 1) {
 					if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
@@ -93,7 +93,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				echoError(4013);
 			}
 		} else {
-			echoError(4003);
+			echoError(4008);
 		}
 		break;
 	case "PUT":

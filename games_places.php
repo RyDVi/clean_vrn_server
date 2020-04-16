@@ -5,7 +5,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
     case "GET":
         header("Content-type: application/json");
         if (isset($_SESSION["id_game"])) {
-            $stmt = $conn->prepare("SELECT description, gp.id, coor.point, ST_AsGeoJSON(coor.polygon) FROM games_places as gp JOIN coordinates as coor ON gp.id=coor.id_place WHERE id_game=?");
+            $stmt = $conn->prepare("SELECT description, id, point, ST_AsGeoJSON(polygon) FROM games_places WHERE id_game=?");
             $stmt->bind_param("i", $_SESSION["id_game"]);
             if (!$stmt->execute()) {
                 echoError(5002);
@@ -16,7 +16,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
                 if (isset($point) && isset($polygon)) {
                     $ppoint = unpack('x4/c/L/dlatitude/dlongitude', $point);
                     array_push($data, [
-                        "description" => $description, "id_place_type" => $id_place, "point" => ["latitude" =>$ppoint['latitude'],"longitude"=> $ppoint['longitude']], "polygon" => $polygon
+                        "description" => $description, "id_place_type" => $id_place, "point" => ["latitude" => $ppoint['latitude'], "longitude" => $ppoint['longitude']], "polygon" => $polygon
                     ]);
                 } else if (!isset($point) && isset($polygon)) {
                     array_push($data, [
@@ -25,7 +25,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
                 } else if (isset($point) && !isset($polygon)) {
                     $ppoint = unpack('x4/c/L/dlatitude/dlongitude', $point);
                     array_push($data, [
-                        "description" => $description, "id_place_type" => $id_place, "point" => ["latitude" =>$ppoint['latitude'],"longitude"=> $ppoint['longitude']], "polygon" => ""
+                        "description" => $description, "id_place_type" => $id_place, "point" => ["latitude" => $ppoint['latitude'], "longitude" => $ppoint['longitude']], "polygon" => ""
                     ]);
                 } else {
                     array_push($data, [
@@ -49,48 +49,39 @@ switch ($_SERVER['REQUEST_METHOD']) {
                     $postData = file_get_contents('php://input');
                     $data = json_decode($postData, true);
                     if (isset($data)) {
-                        $stmt = $conn->prepare("INSERT INTO games_places(id, description) VALUES(?, ?)");
-                        $stmt->bind_param("is", $data["id_place_type"],  $data["description"]);
-                        if (!$stmt->execute()) {
-                            echoError(5002);
-                        } else {
-                            http_response_code(201);
-                            echo json_encode([
-                                "id" => $stmt->insert_id, "id_game" => $_SESSION["id_game"],
-                                "id_place" => $data["id_place_type"], "description" => $data["description"]
-                            ]);
-                        }
                         if ($data["id_place_type"] === 5) {
-                         //   if (!checkPoly($conn, $data["polygon"])) {
-                                $stmt = $conn->prepare("INSERT INTO coordinates(polygon) VALUES(GeomFromText(?))");
-                                $stmt->bind_param("s", $data["polygon"]);
+                            if (!checkPoly($conn, $data["polygon"])) {
+                                $stmt = $conn->prepare("INSERT INTO games_places(description, id_place_type, polygon) VALUES(?, ?, GeomFromText('POLYGON(polygon)'))");
+                                $stmt->bind_param("sis", $data["description"], $data["id_place_type"], $data["polygon"]);
                                 if (!$stmt->execute()) {
                                     echoError(5002);
                                 } else {
                                     http_response_code(201);
                                     echo json_encode([
-                                        "id" => $stmt->insert_id, "id_place" => $data["id_place_type"], "polygon" => $data["polygon"]
+                                        "id" => $stmt->insert_id, "id_game" => $_SESSION["id_game"],
+                                        "id_place" => $data["id_place_type"], "description" => $data["description"]
                                     ]);
                                 }
-                            // } else {
-                            //     echoError(4007);
-                            // }
+                            } else {
+                                echoError(4007);
+                            }
                         } else if ($data["id_place_type"] === 3) {
-                        //     if (checkPoint($conn, $data["point"])) {
-                        //         echoError(4006);
-                        //     }
-                        // } else {
-                            $stmt = $conn->prepare("INSERT INTO coordinates(point, id_place) values (PointFromText('POINT({$data['point']["latitude"]} {$data['point']["longitude"]})'), ?)");
-                            $stmt->bind_param("i", $data["id_place_type"]);
+                            if (checkPoint($conn, $data["point"])) {
+                                echoError(4006);
+                            }
+                        } else {
+                            $stmt = $conn->prepare("INSERT INTO games_places(description, id_place_type, point) VALUES(?, ?, PointFromText('POINT(" . $data["point"]["latitude"] . " " . $data["point"]["longitude"] . ")'))");
+                            $stmt->bind_param("si", $data["description"], $data["id_place_type"]);
                             if (!$stmt->execute()) {
                                 echoError(5002);
                             } else {
                                 http_response_code(201);
                                 echo json_encode([
-                                    "id" => $stmt->insert_id, "id_place" => $data["id_place_type"], "point" => $data['point']
+                                    "id" => $stmt->insert_id, "id_game" => $_SESSION["id_game"],
+                                    "id_place" => $data["id_place_type"], "description" => $data["description"]
                                 ]);
                             }
-                         }
+                        }
                     } else {
                         echoError(4001);
                     }
@@ -178,16 +169,16 @@ $conn->close();
 
 function checkPoint($conn, $stPoint)
 {
-    $point = [];
-    $stmt = $conn->prepare("SELECT point FROM coordinate WHERE id_place=3");
-    
+    $point = "";
+    $stmt = $conn->prepare("SELECT point FROM games_places WHERE id_place_type=3");
     if (!$stmt->execute()) {
         echoError(5002);
     }
     $stmt->bind_result($point);
+    $ppoint = unpack('x4/c/L/dlatitude/dlongitude', $point);
     $data = [];
     while ($stmt->fetch()) {
-        if ($point == $stPoint) {
+        if ($point["latitude"] == $stPoint["latitude"] && $point["longitude"] == $stPoint["longitude"]) {
             return true;
             break;
         }
@@ -197,16 +188,18 @@ function checkPoint($conn, $stPoint)
 function checkPoly($conn, $poly)
 {
     $polyg = [];
-    $stmt = $conn->prepare("SELECT polygon FROM coordinate WHERE id_place=3");
+    $stmt = $conn->prepare("SELECT ST_AsGeoJSON(polygon) FROM games_places WHERE id_place_type=5");
     if (!$stmt->execute()) {
         echoError(5002);
     }
     $stmt->bind_result($polyg);
     $data = [];
+    $i = 1;
     while ($stmt->fetch()) {
-        if ($polyg == $poly) {
+        if ($polyg[$i]["latitude"] == $poly["coordinates"][$i] && $polyg[1]["longitude"] == $poly["coordinates"][2]) {
             return true;
             break;
         }
+        $i++;
     }
 }

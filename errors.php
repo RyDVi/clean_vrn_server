@@ -34,6 +34,10 @@ function echoError($errorCode)
             http_response_code(400);
             echoCustomError("Область уже существует", 4007);
             break;
+        case 4008:
+            http_response_code(400);
+            echoCustomError("Время начала игры не может быть меньше реального времени", 4008);
+            break;
         case 4011:
             http_response_code(401);
             echoCustomError("Логин или пароль введен неверно", 4011);
