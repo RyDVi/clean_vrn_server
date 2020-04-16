@@ -27,7 +27,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 					$tempDatetime = DateTime::createFromFormat('Y-m-d H:i:s', $datetime);
 					echo json_encode([
 						"id" => $id, "id_status" => $new_id_status, "name" => $name, "description" => $description,
-						"route" => $route, "datetime" =>  $tempDatetime->format('Y-m-d\TH:i:s\Z')
+						"route" => $route, "datetime" =>  $tempDatetime->format('Y-m-d H:i:s')
 					]);
 				} else {
 					echoError(4041);
@@ -54,7 +54,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				$tempDatetime = DateTime::createFromFormat('Y-m-d H:i:s', $datetime);
 				array_push($data, [
 					"id" => $id, "id_status" => $new_id_status, "name" => $name, "description" => $description,
-					"route" => $route, "datetime" => $tempDatetime->format('Y-m-d\TH:i:s\Z')
+					"route" => $route, "datetime" => $tempDatetime->format('Y-m-d H:i:s')
 				]);
 			}
 			http_response_code(200);
@@ -72,7 +72,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 					if (isset($data)) {
 						if (strtotime($data["datetime"]) > strtotime(date('Y-m-d H:i:s'))) {
 							$stmt = $conn->prepare("INSERT INTO games(id_status, name, route, datetime) VALUES(1, ?, ?, ?)");
-							$stmt->bind_param("sss", $data["name"],  $data["route"], $data["datetime"]);
+							$stmt->bind_param("sss", $data["name"],  $data["route"], $data['datetime']);
 							if (!$stmt->execute()) {
 								echoError(5002);
 							} else {
@@ -107,7 +107,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						$data = json_decode($postData, true);
 						if (isset($data) && isset($_GET['id_game'])) {
 							$stmt = $conn->prepare("UPDATE games SET name=?,  route=?, datetime=?  WHERE id=?");
-							$stmt->bind_param("sssi", $data["name"],  $data["route"], $data["datetime"], $_GET['id_game']);
+							$stmt->bind_param("sssi", $data["name"],  $data["route"], $data['datetime'], $_GET['id_game']);
 							if (!$stmt->execute()) {
 								echoError(5002);
 							} else {
