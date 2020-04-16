@@ -167,7 +167,7 @@ function date_g(mysqli $conn)
 	$time = date('Y-m-d H:i:s');
 	$stmt = $conn->prepare("SELECT datetime FROM games WHERE id=?");
 
-	$stmt->bind_param('i', $_GET['id']);
+	$stmt->bind_param('i', $_GET['id_game']);
 	if (!$stmt->execute()) {
 		echoError(5002);
 	} else {

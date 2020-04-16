@@ -49,66 +49,63 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		break;
 
 	case "POST":
-		if (date_g($conn)) {
-			if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-				echoError(5011);
-			}
-			$postData = file_get_contents('php://input');
-			$data = json_decode($postData, true);
-			if (isset($_GET['id_game']) && isset($data)) {
-				$createdCoefficient = [];
-				foreach ($data['coefficients'] as &$coefficients) {
-					$stmt = $conn->prepare("INSERT INTO garbage_coefficients(id_garbage, id_game, coefficient) VALUES (?,?,?)");
-					$stmt->bind_param("iii", $coefficients['id_garbage'], $_GET['id_game'], $coefficients['coefficient']);
-					if (!$stmt->execute()) {
-						echoError(5002);
-					} else {
-						array_push($createdCoefficient, [
-							"id" => $stmt->insert_id, "id_garbage" => $coefficients['id_garbage'],
-							"id_game" => $_GET['id_game'], "coefficient" => $coefficients['coefficient']
-						]);
-					}
+		if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
+			echoError(5011);
+		}
+		$postData = file_get_contents('php://input');
+		$data = json_decode($postData, true);
+		if (isset($_GET['id_game']) && isset($data)) {
+			$createdCoefficient = [];
+			foreach ($data['coefficients'] as &$coefficients) {
+				if (!isset($coefficients['coefficient'])) {
+					$new_coefficient = 0;
+				} else {
+					$new_coefficient = $coefficients['coefficient'];
 				}
-				http_response_code(201);
-				echo json_encode($createdCoefficient);
-			} else {
-				echoError(4001);
+				$stmt = $conn->prepare("INSERT INTO garbage_coefficients(id_garbage, id_game, coefficient) VALUES (?,?,?)");
+				$stmt->bind_param("iii", $coefficients['id_garbage'], $_GET['id_game'], $new_coefficient);
+				if (!$stmt->execute()) {
+					echoError(5002);
+				} else {
+					array_push($createdCoefficient, [
+						"id" => $stmt->insert_id, "id_garbage" => $coefficients['id_garbage'],
+						"id_game" => $_GET['id_game'], "coefficient" => $coefficients['coefficient']
+					]);
+				}
 			}
+			http_response_code(201);
+			echo json_encode($createdCoefficient);
 		} else {
-			echoError(4003);
+			echoError(4001);
 		}
 		break;
 	case "PUT":
-		if (date_g($conn)) {
-			if ($_SERVER["CONTENT_TYPE"] != 'application/json') {
-				echoError(5011);
-			} else {
-				$postData = file_get_contents('php://input');
-				$data = json_decode($postData, true);
-				if (isset($_GET['id_game']) && isset($data)) {
-					foreach ($data['coefficients'] as &$coefficients) {
-						$stmt = null;
-						if (!isset($coefficients['id'])) {
-							$stmt = $conn->prepare("INSERT INTO garbage_coefficients(id_garbage, id_game, coefficient) VALUES (?,?,?)");
-							$stmt->bind_param('iii', $coefficients['id_garbage'], $_GET['id_game'], $coefficients['coefficient']);
-						} else {
-							$stmt = $conn->prepare("UPDATE garbage_coefficients SET coefficient=? WHERE id=?");
-							$stmt->bind_param('ii', $coefficients['coefficient'], $coefficients['id']);
-						}
-						$stmt->execute();
-						if ($stmt->fetch()) {
-							//TODO: unknown
-						} else {
-							//TODO: unknown
-						}
-					}
-					http_response_code(200);
-				} else {
-					echoError(4001);
-				}
-			}
+		if ($_SERVER["CONTENT_TYPE"] != 'application/json') {
+			echoError(5011);
 		} else {
-			echoError(4003);
+			$postData = file_get_contents('php://input');
+			$data = json_decode($postData, true);
+			if (isset($_GET['id_game']) && isset($data)) {
+				foreach ($data['coefficients'] as &$coefficients) {
+					$stmt = null;
+					if (!isset($coefficients['id'])) {
+						$stmt = $conn->prepare("INSERT INTO garbage_coefficients(id_garbage, id_game, coefficient) VALUES (?,?,?)");
+						$stmt->bind_param('iii', $coefficients['id_garbage'], $_GET['id_game'], $coefficients['coefficient']);
+					} else {
+						$stmt = $conn->prepare("UPDATE garbage_coefficients SET coefficient=? WHERE id=?");
+						$stmt->bind_param('ii', $coefficients['coefficient'], $coefficients['id']);
+					}
+					$stmt->execute();
+					if ($stmt->fetch()) {
+						//TODO: unknown
+					} else {
+						//TODO: unknown
+					}
+				}
+				http_response_code(200);
+			} else {
+				echoError(4001);
+			}
 		}
 		break;
 	default:
@@ -122,8 +119,8 @@ $conn->close();
 function date_g(mysqli $conn)
 {
 	$time = date('Y-m-d H:i:s');
-	$stmt = $conn->prepare("SELECT g.datetime FROM garbage_coefficients gc inner JOIN games g on gc.id_game = g.id WHERE gc.id=?");
-	$stmt->bind_param('i', $_GET['id']);
+	$stmt = $conn->prepare("SELECT datetime FROM games WHERE id=?");
+	$stmt->bind_param('i', $_GET['id_game']);
 	if (!$stmt->execute()) {
 		echoError(5002);
 	} else {
