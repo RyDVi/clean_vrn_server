@@ -62,15 +62,15 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		}
 		break;
 	case "POST":
-		if (strtotime($data["datetime"]) < strtotime(date('Y-m-d H:i:s'))) {
-			if (isset($_SESSION['id_user_type'])) {
-				if ($_SESSION['id_user_type'] === 1) {
-					if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
-						echoError(5011);
-					} else {
-						$postData = file_get_contents('php://input');
-						$data = json_decode($postData, true);
-						if (isset($data)) {
+		if (isset($_SESSION['id_user_type'])) {
+			if ($_SESSION['id_user_type'] === 1) {
+				if ($_SERVER["CONTENT_TYPE"] !=  'application/json') {
+					echoError(5011);
+				} else {
+					$postData = file_get_contents('php://input');
+					$data = json_decode($postData, true);
+					if (isset($data)) {
+						if (strtotime($data["datetime"]) > strtotime(date('Y-m-d H:i:s'))) {
 							$stmt = $conn->prepare("INSERT INTO games(id_status, name, route, datetime) VALUES(1, ?, ?, ?)");
 							$stmt->bind_param("sss", $data["name"],  $data["route"], $data["datetime"]);
 							if (!$stmt->execute()) {
@@ -83,17 +83,17 @@ switch ($_SERVER['REQUEST_METHOD']) {
 								]);
 							}
 						} else {
-							echoError(4001);
+							echoError(4008);
 						}
+					} else {
+						echoError(4001);
 					}
-				} else {
-					echoError(4031);
 				}
 			} else {
-				echoError(4013);
+				echoError(4031);
 			}
 		} else {
-			echoError(4008);
+			echoError(4013);
 		}
 		break;
 	case "PUT":
