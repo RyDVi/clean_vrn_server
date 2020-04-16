@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     } else if (isset($data['is_player'])) {
         http_response_code(200);
         echo json_encode(['session_id' => 'PHPSESSID=' . session_id(), 'id_user_type' => 3]);
-    } else if (!isset($data['username']) && !isset($data['password'])) {
+    } else if (!isset($data['username']) || !isset($data['password'])) {
         echoError(4012);
     }
 } else {
