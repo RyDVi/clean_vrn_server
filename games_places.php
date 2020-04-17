@@ -118,33 +118,18 @@ switch ($_SERVER['REQUEST_METHOD']) {
                     header('Content-Type: application/json');
                     $postData = file_get_contents('php://input');
                     $data = json_decode($postData, true);
-                    if (isset($data)) {
-                        if (checkNumber($conn, $data['number'])) {
-                            $stmt = $conn->prepare("UPDATE games_places SET description WHERE id=?");
-                            $stmt->bind_param('isi', $data['description'], $_GET['id']);
-                            if (!$stmt->execute()) {
-                                echoError(5002);
-                            } else {
-                                http_response_code(201);
-                                if (checkPoint($conn, $data['point'])) {
-                                    echoError(4006);
-                                } else {
-                                    $stmt = $conn->prepare("UPDATE coordinate SET description WHERE id_place=?");
-                                    $stmt->bind_param('isi', $data['description'], $_GET['id']);
-                                    if (!$stmt->execute()) {
-                                        echoError(5002);
-                                    } else {
-                                        echo json_encode([
-                                            'id' => $_GET['id'], 'description' => $data['description'], 'point' => $data['point']
-                                        ]);
-                                    }
-                                }
-                            }
+                    if (isset($data) && isset($_GET['id']) && $data['id_place_type'] != 5) {
+                        $stmt = $conn->prepare("UPDATE games_places"
+                            . " SET description='{$data['description']}', id_place_type={$data['id_place_type']}"
+                            . " ,point=PointFromText('POINT({$data['point']['latitude']} {$data['point']['longitude']})')"
+                            . " WHERE id={$_GET['id']}");
+                        if (!$stmt->execute()) {
+                            echoError(5002);
                         } else {
-                            echoError(4001);
+                            http_response_code(200);
                         }
                     } else {
-                        echoError(4005);
+                        echoError(4001);
                     }
                 }
             } else {
