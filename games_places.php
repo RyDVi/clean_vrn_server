@@ -49,20 +49,31 @@ switch ($_SERVER['REQUEST_METHOD']) {
                             $data['description'] = "";
                         }
                         if ($data['id_place_type'] === 5) {
-                            if (!checkPoly($conn, $data['polygon'])) {
-                                $stmt = $conn->prepare("INSERT INTO games_places(description, id_place_type, polygon) VALUES(?, ?, GeomFromText('POLYGON(polygon)'))");
-                                $stmt->bind_param('sis', $data['description'], $data['id_place_type'], $data['polygon']);
-                                if (!$stmt->execute()) {
-                                    echoError(5002);
-                                } else {
-                                    http_response_code(201);
-                                    echo json_encode([
-                                        'id' => $stmt->insert_id, 'id_game' => $_SESSION['id_game'],
-                                        'id_place' => $data['id_place_type'], 'description' => $data['description']
-                                    ]);
-                                }
+                            $mysqlPolygon = "";
+                            $mysqlPolygon .= "{$data['polygon'][0]['latitude']} {$data['polygon'][0]['longitude']}";
+                            for ($iCoordinate = 1; $iCoordinate < count($data['polygon']); $iCoordinate++) {
+                                $mysqlPolygon .= ",{$data['polygon'][$iCoordinate]['latitude']} {$data['polygon'][$iCoordinate]['longitude']}";
+                            }
+                            $idGameZone = getGameZoneId($conn, $_SESSION['id_game']);
+                            if ($idGameZone) {
+                                $stmt = $conn->prepare("UPDATE games_places"
+                                    . " SET description='{$data['description']}'"
+                                    . " , polygon=GeomFromText('POLYGON(($mysqlPolygon))')"
+                                    . " WHERE id=$idGameZone");
                             } else {
-                                echoError(4007);
+                                $stmt = $conn->prepare("INSERT INTO games_places(id_game, description, id_place_type, polygon)"
+                                    . "VALUES({$_SESSION['id_game']},'{$data['description']}',{$data['id_place_type']},"
+                                    . "GeomFromText('POLYGON(($mysqlPolygon))'))");
+                            }
+                            if (!$stmt->execute()) {
+                                echoError(5002);
+                            } else {
+                                http_response_code(201);
+                                echo json_encode([
+                                    'id' => $stmt->insert_id, 'id_game' => $_SESSION['id_game'],
+                                    'id_place' => $data['id_place_type'], 'description' => $data['description'],
+                                    'polygon' => $data['polygon']
+                                ]);
                             }
                         } else {
                             if ($data['id_place_type'] === 4) {
@@ -179,21 +190,18 @@ function getPointOfStart($conn, $idGame)
     }
 }
 
-function checkPoly($conn, $poly)
+function getGameZoneId($conn, $idGame)
 {
-    $polyg = [];
-    $stmt = $conn->prepare("SELECT ST_AsGeoJSON(polygon) FROM games_places WHERE id_place_type=5");
+    $stmt = $conn->prepare("SELECT id FROM games_places WHERE id_place_type=5 AND id_game=?");
+    $stmt->bind_param('i', $idGame);
     if (!$stmt->execute()) {
         echoError(5002);
     }
-    $stmt->bind_result($polyg);
-    $data = [];
-    $i = 1;
-    while ($stmt->fetch()) {
-        if ($polyg[$i]['latitude'] == $poly['coordinates'][$i] && $polyg[1]['longitude'] == $poly['coordinates'][2]) {
-            return true;
-            break;
-        }
-        $i++;
+    $idGameZone = null;
+    $stmt->bind_result($idGameZone);
+    if ($stmt->fetch()) {
+        return $idGameZone;
+    } else {
+        return false;
     }
 }
