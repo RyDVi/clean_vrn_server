@@ -102,16 +102,20 @@ switch ($_SERVER['REQUEST_METHOD']) {
 								$stmt = null;
 								if (!isset($collected_garbage['id_collected_garbage'])) {
 									$stmt = $conn->prepare("INSERT INTO teams_garbages(id_team, id_garbage, count) VALUES (?,?,?)");
-									$stmt->bind_param('iii', $_GET['id_team'], $collected_garbage['id_garbage'], $collected_garbage['count']);
+									$stmt->bind_param('iii', $_GET['id_team'], $collected_garbage['id_garbage'], $collected_garbage['coefficient']);
 								} else {
 									$stmt = $conn->prepare("UPDATE teams_garbages SET count=? WHERE id=?");
-									$stmt->bind_param('ii', $collected_garbage['count'], $collected_garbage['id_collected_garbage']);
+									$stmt->bind_param('ii', $collected_garbage['coefficient'], $collected_garbage['id_collected_garbage']);
 								}
-								$stmt->execute();
+								if (!$stmt->execute()) {
+									echoError(5002);
+									break;
+								}
 								if ($stmt->fetch()) {
 									//TODO: unknown
 								} else {
-									//TODO: unknown
+									echoError(null);
+									break;
 								}
 							}
 							http_response_code(200);
