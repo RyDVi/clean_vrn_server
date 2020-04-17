@@ -98,7 +98,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						$postData = file_get_contents('php://input');
 						$data = json_decode($postData, true);
 						if (isset($_GET['id_team']) && isset($data)) {
-							foreach ($data['collщзжected_garbages'] as &$collected_garbage) {
+							foreach ($data['collected_garbages'] as &$collected_garbage) {
 								$stmt = null;
 								if (!isset($collected_garbage['id_collected_garbage'])) {
 									$stmt = $conn->prepare("INSERT INTO teams_garbages(id_team, id_garbage, count) VALUES (?,?,?)");

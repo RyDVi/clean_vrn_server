@@ -71,17 +71,21 @@ switch ($_SERVER['REQUEST_METHOD']) {
 					} else {
 						$numberTeam = generateNumber($conn, $_SESSION['id_game']);
 					}
-					$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
-					$stmt->bind_param("isi", $numberTeam, $data["name"], $_SESSION["id_game"]);
-					if (!$stmt->execute()) {
-						echoError(5002);
+					if (checkNumber($conn, $numberTeam, null, $_SESSION['id_game'])) {
+						$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
+						$stmt->bind_param("isi", $numberTeam, $data["name"], $_SESSION["id_game"]);
+						if (!$stmt->execute()) {
+							echoError(5002);
+						}
+						header("Content-Type: application/json");
+						http_response_code(201);
+						echo json_encode([
+							"id" => $stmt->insert_id, 'number' => $numberTeam,
+							"name" => $data['name']
+						]);
+					} else {
+						echoError(4005);
 					}
-					header("Content-Type: application/json");
-					http_response_code(201);
-					echo json_encode([
-						"id" => $stmt->insert_id, 'number' => $numberTeam,
-						"name" => $data['name']
-					]);
 				} else {
 					echoError(4001);
 				}
@@ -107,7 +111,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						} else {
 							$numberTeam = generateNumber($conn, $_SESSION['id_game']);
 						}
-						if (checkNumber($conn, $data['number'], $_GET["id_team"])) {
+						if (checkNumber($conn, $numberTeam, $_GET["id_team"], $_SESSION['id_game'])) {
 							$stmt = $conn->prepare("UPDATE teams SET number=?, name=? WHERE id=?");
 							$stmt->bind_param("isi", $numberTeam, $data["name"], $_GET['id_team']);
 							if (!$stmt->execute()) {
@@ -161,10 +165,15 @@ switch ($_SERVER['REQUEST_METHOD']) {
 		echoError(4051);
 }
 $conn->close();
-function checkNumber(mysqli $conn, $CheckNumber, $idTeam)
+function checkNumber(mysqli $conn, $CheckNumber, $idTeam, $idGame)
 {
-	$stmt = $conn->prepare("SELECT * FROM teams WHERE number=? AND $idTeam!=?");
-	$stmt->bind_param('ii', $CheckNumber, $idTeam);
+	if (isset($idTeam)) {
+		$stmt = $conn->prepare("SELECT * FROM teams WHERE number=? AND id!=? AND id_game=?");
+		$stmt->bind_param('iii', $CheckNumber, $idTeam, $idGame);
+	} else {
+		$stmt = $conn->prepare("SELECT * FROM teams WHERE number=? AND id_game=?");
+		$stmt->bind_param('ii', $CheckNumber, $idGame);
+	}
 	if (!$stmt->execute()) {
 		echoError(5002);
 	}
