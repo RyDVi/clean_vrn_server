@@ -5,33 +5,29 @@ header('Content-type: application/json');
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
         if (isset($_SESSION['id_game'])) {
-            $stmt = $conn->prepare("SELECT description, id, point, ST_AsGeoJSON(polygon) FROM games_places WHERE id_game=?");
-            $stmt->bind_param('i', $_SESSION['id_game']);
+            $stmt = $conn->prepare("SELECT id, id_place_type, description, ST_AsGeoJSON(point), ST_AsGeoJSON(polygon)"
+                . "FROM games_places WHERE id_game={$_SESSION['id_game']}");
             if (!$stmt->execute()) {
                 echoError(5002);
             }
-            $stmt->bind_result($description, $id_place, $point, $polygon);
+            $stmt->bind_result($id, $id_place_type, $description, $point, $polygon);
             $data = [];
             while ($stmt->fetch()) {
-                if (isset($point) && isset($polygon)) {
-                    $ppoint = unpack('x4/c/L/dlatitude/dlongitude', $point);
-                    array_push($data, [
-                        'description' => $description, 'id_place_type' => $id_place, 'point' => ['latitude' => $ppoint['latitude'], 'longitude' => $ppoint['longitude']], 'polygon' => $polygon
-                    ]);
-                } else if (!isset($point) && isset($polygon)) {
-                    array_push($data, [
-                        'description' => $description, 'id_place_type' => $id_place, 'point' => '', 'polygon' => $polygon
-                    ]);
-                } else if (isset($point) && !isset($polygon)) {
-                    $ppoint = unpack('x4/c/L/dlatitude/dlongitude', $point);
-                    array_push($data, [
-                        'description' => $description, 'id_place_type' => $id_place, 'point' => ['latitude' => $ppoint['latitude'], 'longitude' => $ppoint['longitude']], 'polygon' => ''
-                    ]);
-                } else {
-                    array_push($data, [
-                        'description' => $description, 'id_place_type' => $id_place, 'point' => '', 'polygon' => ''
-                    ]);
+                if (isset($point)) {
+                    $point = json_decode($point, true);
+                    $googlePoint = [
+                        'latitude' => $point['coordinates'][0],
+                        'longitude' => $point['coordinates'][1]
+                    ];
                 }
+                $googlePolygon = null;
+                if (isset($polygon)) {
+                    $polygon = json_decode($polygon, true);
+                }
+                array_push($data, [
+                    "id" => $id, 'description' => $description, 'id_place_type' => $id_place_type,
+                    'point' => $googlePoint, 'polygon' => $googlePolygon
+                ]);
             }
             http_response_code(200);
             echo json_encode($data);
@@ -39,7 +35,6 @@ switch ($_SERVER['REQUEST_METHOD']) {
             echoError(4002);
         }
         break;
-
     case 'POST':
         if (isset($_SESSION['id_user_type'])) {
             if ($_SESSION['id_user_type'] === 1) {
