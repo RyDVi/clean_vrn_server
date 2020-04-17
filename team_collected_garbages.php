@@ -111,12 +111,6 @@ switch ($_SERVER['REQUEST_METHOD']) {
 									echoError(5002);
 									break;
 								}
-								if ($stmt->fetch()) {
-									//TODO: unknown
-								} else {
-									echoError(null);
-									break;
-								}
 							}
 							http_response_code(200);
 						}

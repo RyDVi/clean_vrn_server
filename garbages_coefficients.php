@@ -96,11 +96,6 @@ switch ($_SERVER['REQUEST_METHOD']) {
 						$stmt->bind_param('ii', $coefficients['coefficient'], $coefficients['id']);
 					}
 					$stmt->execute();
-					if ($stmt->fetch()) {
-						//TODO: unknown
-					} else {
-						//TODO: unknown
-					}
 				}
 				http_response_code(200);
 			} else {
