@@ -23,6 +23,10 @@ switch ($_SERVER['REQUEST_METHOD']) {
                 $googlePolygon = null;
                 if (isset($polygon)) {
                     $polygon = json_decode($polygon, true);
+                    $googlePolygon = [];
+                    foreach ($polygon['coordinates'][0] as &$polygonCoordinate) {
+                        array_push($googlePolygon, ['latitude' => $polygonCoordinate[0], 'longitude' => $polygonCoordinate[1]]);
+                    }
                 }
                 array_push($data, [
                     "id" => $id, 'description' => $description, 'id_place_type' => $id_place_type,
