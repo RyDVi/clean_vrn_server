@@ -67,20 +67,19 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				$data = json_decode($postData, true);
 				if (isset($data)) {
 					if (isset($data['number'])) {
-						$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
-						$stmt->bind_param("isi", $data["number"], $data["name"], $_SESSION["id_game"]);
+						$numberTeam = $data["number"];
 					} else {
-						$data["number"] = generateNumber($conn);
-						$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
-						$stmt->bind_param("isi", $data["number"], $data["name"], $_SESSION["id_game"]);
+						$numberTeam = generateNumber($conn, $_SESSION['id_game']);
 					}
+					$stmt = $conn->prepare("INSERT INTO teams(number, name, id_game) VALUES(?,?,?)");
+					$stmt->bind_param("isi", $numberTeam, $data["name"], $_SESSION["id_game"]);
 					if (!$stmt->execute()) {
 						echoError(5002);
 					}
 					header("Content-Type: application/json");
 					http_response_code(201);
 					echo json_encode([
-						"id" => $stmt->insert_id, 'number' => $data['number'],
+						"id" => $stmt->insert_id, 'number' => $numberTeam,
 						"name" => $data['name']
 					]);
 				} else {
@@ -103,18 +102,20 @@ switch ($_SERVER['REQUEST_METHOD']) {
 					$postData = file_get_contents('php://input');
 					$data = json_decode($postData, true);
 					if (isset($data) && isset($_GET['id_team'])) {
-						if (!isset($data["number"])) {
-							$data["number"] = generateNumber($conn);
+						if (isset($data['number'])) {
+							$numberTeam = $data["number"];
+						} else {
+							$numberTeam = generateNumber($conn, $_SESSION['id_game']);
 						}
 						if (checkNumber($conn, $data['number'], $_GET["id_team"])) {
 							$stmt = $conn->prepare("UPDATE teams SET number=?, name=? WHERE id=?");
-							$stmt->bind_param("isi", $data["number"], $data["name"], $_GET['id_team']);
+							$stmt->bind_param("isi", $numberTeam, $data["name"], $_GET['id_team']);
 							if (!$stmt->execute()) {
 								echoError(5002);
 							} else {
 								http_response_code(201);
 								echo json_encode([
-									"id" => $_GET['id_team'], "number" => $data['number'],
+									"id" => $_GET['id_team'], "number" => $numberTeam,
 									"name" => $data['name']
 								]);
 							}
@@ -174,26 +175,29 @@ function checkNumber(mysqli $conn, $CheckNumber, $idTeam)
 	return $tr;
 }
 
-function generateNumber(mysqli $conn)
+function generateNumber(mysqli $conn, $idGame)
 {
-	$isNumberFinded = false;
-	$numb = 0;
-	$stmt = $conn->prepare("SELECT number FROM teams");
+	$stmt = $conn->prepare("SELECT number FROM teams WHERE id_game=?");
+	$stmt->bind_param('i', $idGame);
 	if (!$stmt->execute()) {
 		echoError(5002);
 	}
-	$stmt->bind_result($number);
-	$date = [];
-	while ($stmt->fetch())
-		array_push($date, $number);
+	$stmt->bind_result($numberTeam);
+	$numbers = [];
+	while ($stmt->fetch()) {
+		array_push($numbers, $numberTeam);
+	}
+	$isNumberFinded = false;
+	$generatedNumber = 0;
 	while (!$isNumberFinded) {
-		$numb++;
+		$generatedNumber++;
 		$isNumberFinded = true;
-		foreach ($date as &$i) {
-			if ($numb === $i) {
+		foreach ($numbers as &$number) {
+			if ($generatedNumber === $number) {
 				$isNumberFinded = false;
+				break;
 			}
 		}
 	}
-	return $numb;
+	return $generatedNumber;
 }
