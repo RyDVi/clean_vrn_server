@@ -6,12 +6,12 @@ switch ($_SERVER['REQUEST_METHOD']) {
 	case "GET":
 		if (!empty($_GET['id'])) {
 			$id_person = $_GET['id'];
-			$stmt = $conn->prepare("SELECT * FROM games WHERE id=?");
+			$stmt = $conn->prepare("SELECT id, id_status, name, route, datetime FROM games WHERE id=?");
 			$stmt->bind_param("i", $id_person);
 			if (!$stmt->execute()) {
 				echoError(5002);
 			} else {
-				$stmt->bind_result($id, $id_status, $name, $description, $route, $datetime);
+				$stmt->bind_result($id, $id_status, $name, $route, $datetime);
 				if ($stmt->fetch()) {
 					http_response_code(200);
 					$new_id_status;
@@ -26,7 +26,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 					}
 					$tempDatetime = DateTime::createFromFormat('Y-m-d H:i:s', $datetime);
 					echo json_encode([
-						"id" => $id, "id_status" => $new_id_status, "name" => $name, "description" => $description,
+						"id" => $id, "id_status" => $new_id_status, "name" => $name,
 						"route" => $route, "datetime" =>  $tempDatetime->format('Y-m-d H:i:s')
 					]);
 				} else {
@@ -34,11 +34,11 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				}
 			}
 		} else {
-			$stmt = $conn->prepare("SELECT * FROM games");
+			$stmt = $conn->prepare("SELECT id, id_status, name, route, datetime FROM games");
 			if (!$stmt->execute()) {
 				echoError(5002);
 			}
-			$stmt->bind_result($id, $id_status, $name, $description, $route, $datetime);
+			$stmt->bind_result($id, $id_status, $name, $route, $datetime);
 			$data = [];
 			$time = date('Y-m-d H:i:s');
 			while ($stmt->fetch()) {
@@ -53,7 +53,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 				}
 				$tempDatetime = DateTime::createFromFormat('Y-m-d H:i:s', $datetime);
 				array_push($data, [
-					"id" => $id, "id_status" => $new_id_status, "name" => $name, "description" => $description,
+					"id" => $id, "id_status" => $new_id_status, "name" => $name,
 					"route" => $route, "datetime" => $tempDatetime->format('Y-m-d H:i:s')
 				]);
 			}

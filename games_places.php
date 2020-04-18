@@ -13,6 +13,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
             $stmt->bind_result($id, $id_place_type, $description, $point, $polygon);
             $data = [];
             while ($stmt->fetch()) {
+                $googlePoint = null;
                 if (isset($point)) {
                     $point = json_decode($point, true);
                     $googlePoint = [
